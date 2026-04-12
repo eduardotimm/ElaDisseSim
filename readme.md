@@ -1,1 +1,0 @@
-# Ela Disse Sim!

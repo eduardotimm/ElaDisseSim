@@ -1,0 +1,5 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Aqui removemos todo aquele CSS padrão que vem no Vite e deixamos só o Tailwind */
