@@ -1,9 +1,10 @@
 {
   "version": 2,
-  "dgSpecHash": "Xch7SdyDLAg=",
+  "dgSpecHash": "GclhweMSFhE=",
   "success": true,
   "projectFilePath": "C:\\Users\\etimm\\Desktop\\ElaDisseSim\\backend\\backend.csproj",
   "expectedPackageFiles": [
+    "C:\\Users\\etimm\\.nuget\\packages\\microsoft.aspnetcore.authentication.jwtbearer\\10.0.5\\microsoft.aspnetcore.authentication.jwtbearer.10.0.5.nupkg.sha512",
     "C:\\Users\\etimm\\.nuget\\packages\\microsoft.data.sqlite.core\\10.0.5\\microsoft.data.sqlite.core.10.0.5.nupkg.sha512",
     "C:\\Users\\etimm\\.nuget\\packages\\microsoft.entityframeworkcore\\10.0.5\\microsoft.entityframeworkcore.10.0.5.nupkg.sha512",
     "C:\\Users\\etimm\\.nuget\\packages\\microsoft.entityframeworkcore.abstractions\\10.0.5\\microsoft.entityframeworkcore.abstractions.10.0.5.nupkg.sha512",
@@ -12,10 +13,17 @@
     "C:\\Users\\etimm\\.nuget\\packages\\microsoft.entityframeworkcore.sqlite\\10.0.5\\microsoft.entityframeworkcore.sqlite.10.0.5.nupkg.sha512",
     "C:\\Users\\etimm\\.nuget\\packages\\microsoft.entityframeworkcore.sqlite.core\\10.0.5\\microsoft.entityframeworkcore.sqlite.core.10.0.5.nupkg.sha512",
     "C:\\Users\\etimm\\.nuget\\packages\\microsoft.extensions.dependencymodel\\10.0.5\\microsoft.extensions.dependencymodel.10.0.5.nupkg.sha512",
+    "C:\\Users\\etimm\\.nuget\\packages\\microsoft.identitymodel.abstractions\\8.0.1\\microsoft.identitymodel.abstractions.8.0.1.nupkg.sha512",
+    "C:\\Users\\etimm\\.nuget\\packages\\microsoft.identitymodel.jsonwebtokens\\8.0.1\\microsoft.identitymodel.jsonwebtokens.8.0.1.nupkg.sha512",
+    "C:\\Users\\etimm\\.nuget\\packages\\microsoft.identitymodel.logging\\8.0.1\\microsoft.identitymodel.logging.8.0.1.nupkg.sha512",
+    "C:\\Users\\etimm\\.nuget\\packages\\microsoft.identitymodel.protocols\\8.0.1\\microsoft.identitymodel.protocols.8.0.1.nupkg.sha512",
+    "C:\\Users\\etimm\\.nuget\\packages\\microsoft.identitymodel.protocols.openidconnect\\8.0.1\\microsoft.identitymodel.protocols.openidconnect.8.0.1.nupkg.sha512",
+    "C:\\Users\\etimm\\.nuget\\packages\\microsoft.identitymodel.tokens\\8.0.1\\microsoft.identitymodel.tokens.8.0.1.nupkg.sha512",
     "C:\\Users\\etimm\\.nuget\\packages\\sqlitepclraw.bundle_e_sqlite3\\2.1.11\\sqlitepclraw.bundle_e_sqlite3.2.1.11.nupkg.sha512",
     "C:\\Users\\etimm\\.nuget\\packages\\sqlitepclraw.core\\2.1.11\\sqlitepclraw.core.2.1.11.nupkg.sha512",
     "C:\\Users\\etimm\\.nuget\\packages\\sqlitepclraw.lib.e_sqlite3\\2.1.11\\sqlitepclraw.lib.e_sqlite3.2.1.11.nupkg.sha512",
-    "C:\\Users\\etimm\\.nuget\\packages\\sqlitepclraw.provider.e_sqlite3\\2.1.11\\sqlitepclraw.provider.e_sqlite3.2.1.11.nupkg.sha512"
+    "C:\\Users\\etimm\\.nuget\\packages\\sqlitepclraw.provider.e_sqlite3\\2.1.11\\sqlitepclraw.provider.e_sqlite3.2.1.11.nupkg.sha512",
+    "C:\\Users\\etimm\\.nuget\\packages\\system.identitymodel.tokens.jwt\\8.0.1\\system.identitymodel.tokens.jwt.8.0.1.nupkg.sha512"
   ],
   "logs": []
 }

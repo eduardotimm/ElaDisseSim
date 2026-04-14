@@ -9,5 +9,6 @@ public class Gift
     public string? ImageUrl { get; set; }
     public bool IsPurchased { get; set; } // Flag para saber se já presentearam
     public string? PurchasedBy { get; set; } // Adicione isso!
+    public DateTime? ReservedUntil { get; set; }
 
 }

@@ -5,12 +5,22 @@ export default function Home() {
   const navigate = useNavigate();
 
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [faqs, setFaqs] = useState<{ id: number; question: string; answer: string }[]>([]);
 
-  const faqs = [
-    { question: 'Qual o traje do casamento?', answer: 'Esporte Fino. Pedimos a gentileza de evitarem as cores branco, off-white e bege.' },
-    { question: 'Posso levar acompanhante?', answer: 'As confirmações são estritamente nominais e individuais, conforme indicado no seu convite e RSVP.' },
-    { question: 'Haverá estacionamento no local?', answer: 'Sim! O local conta com serviço de valet e estacionamento para todos os convidados.' },
-  ];
+  useEffect(() => {
+    const fetchFaqs = async () => {
+      try {
+        const response = await fetch('http://localhost:5062/api/faqs');
+        if (response.ok) {
+          const data = await response.json();
+          setFaqs(data);
+        }
+      } catch (error) {
+        console.error('Erro ao buscar FAQs:', error);
+      }
+    };
+    fetchFaqs();
+  }, []);
 
   const calculateTimeLeft = () => {
     // Coloque a data do seu casamento aqui (Ano-Mês-DiaTHora:Minuto:Segundo)

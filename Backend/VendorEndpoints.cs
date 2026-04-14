@@ -11,7 +11,7 @@ public static class VendorEndpoints
         {
             var vendors = await db.Vendors.ToListAsync();
             return Results.Ok(vendors);
-        });
+        }).RequireAuthorization();
 
         app.MapPost("/api/vendors", async (CreateVendorRequest request, AppDbContext db) =>
         {
@@ -23,7 +23,11 @@ public static class VendorEndpoints
                 IsPerPerson = request.IsPerPerson,
                 PaidAmount = request.PaidAmount,
                 DueDate = request.DueDate,
-                IsHired = request.IsHired,
+                PaymentDate = request.PaymentDate,
+                Installments = request.Installments,
+                PaidInstallments = request.PaidInstallments,
+                Status = request.Status,
+                ConsiderCost = request.ConsiderCost,
                 Phone = request.Phone,
                 Notes = request.Notes
             };
@@ -32,7 +36,7 @@ public static class VendorEndpoints
             await db.SaveChangesAsync();
 
             return Results.Ok(new { Message = "Fornecedor cadastrado com sucesso!", VendorId = vendor.Id });
-        });
+        }).RequireAuthorization();
 
         app.MapPut("/api/vendors/{id:int}", async (int id, UpdateVendorRequest request, AppDbContext db) =>
         {
@@ -45,13 +49,17 @@ public static class VendorEndpoints
             vendor.IsPerPerson = request.IsPerPerson;
             vendor.PaidAmount = request.PaidAmount;
             vendor.DueDate = request.DueDate;
-            vendor.IsHired = request.IsHired;
+            vendor.PaymentDate = request.PaymentDate;
+            vendor.Installments = request.Installments;
+            vendor.PaidInstallments = request.PaidInstallments;
+            vendor.Status = request.Status;
+            vendor.ConsiderCost = request.ConsiderCost;
             vendor.Phone = request.Phone;
             vendor.Notes = request.Notes;
 
             await db.SaveChangesAsync();
             return Results.Ok(new { Message = "Fornecedor atualizado com sucesso!" });
-        });
+        }).RequireAuthorization();
 
         app.MapDelete("/api/vendors/{id:int}", async (int id, AppDbContext db) =>
         {
@@ -62,9 +70,9 @@ public static class VendorEndpoints
             await db.SaveChangesAsync();
 
             return Results.Ok(new { Message = "Fornecedor excluído com sucesso!" });
-        });
+        }).RequireAuthorization();
     }
 }
 
-public record CreateVendorRequest(string Name, string? Category, decimal? TotalAmount, bool IsPerPerson, decimal? PaidAmount, string? DueDate, bool IsHired, string? Phone, string? Notes);
-public record UpdateVendorRequest(string Name, string? Category, decimal? TotalAmount, bool IsPerPerson, decimal? PaidAmount, string? DueDate, bool IsHired, string? Phone, string? Notes);
+public record CreateVendorRequest(string Name, string? Category, decimal? TotalAmount, bool IsPerPerson, decimal? PaidAmount, string? DueDate, string? PaymentDate, int? Installments, int PaidInstallments, string Status, bool ConsiderCost, string? Phone, string? Notes);
+public record UpdateVendorRequest(string Name, string? Category, decimal? TotalAmount, bool IsPerPerson, decimal? PaidAmount, string? DueDate, string? PaymentDate, int? Installments, int PaidInstallments, string Status, bool ConsiderCost, string? Phone, string? Notes);

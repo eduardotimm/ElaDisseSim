@@ -8,6 +8,7 @@ interface Gift {
   price: number;
   imageUrl: string | null;
   isPurchased: boolean;
+  reservedUntil?: string | null;
 }
 
 // Função utilitária para gerar o código PIX Copia e Cola válido (Padrão EMV / BR Code)
@@ -58,6 +59,15 @@ export default function Presentes() {
   const [buyerPhone, setBuyerPhone] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
+  const formatPhoneNumber = (value: string) => {
+    if (!value) return '';
+    const cleaned = value.replace(/\D/g, '').slice(0, 11);
+    if (cleaned.length === 0) return '';
+    if (cleaned.length <= 2) return `(${cleaned}`;
+    if (cleaned.length <= 7) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`;
+    return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
+  };
+
   const fetchGifts = async () => {
     try {
       const response = await fetch('http://localhost:5062/api/gifts');
@@ -85,7 +95,8 @@ export default function Presentes() {
   const handlePaymentConfirm = async () => {
     if (!selectedGift) return;
     
-    if (!buyerPhone || buyerPhone.length < 10) {
+    const cleanPhone = buyerPhone.replace(/\D/g, '');
+    if (!cleanPhone || cleanPhone.length < 10) {
       alert('Por favor, informe seu telefone com DDD.');
       return;
     }
@@ -96,11 +107,11 @@ export default function Presentes() {
       const response = await fetch(`http://localhost:5062/api/gifts/${selectedGift.id}/purchase`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phoneNumber: buyerPhone })
+        body: JSON.stringify({ phoneNumber: cleanPhone })
       });
 
       if (response.ok) {
-        alert('Pagamento confirmado! Muito obrigado pelo presente! ❤️');
+        alert('Reserva realizada com sucesso! Seu presente ficará reservado por 12 horas aguardando a confirmação do PIX. Muito obrigado pelo presente! ❤️');
         setIsPixModalOpen(false);
         setSelectedGift(null);
         fetchGifts(); // Atualiza a lista na tela para riscar o que acabou de ser comprado
@@ -137,10 +148,15 @@ export default function Presentes() {
           <div className="text-center text-stone-500">Carregando lista de presentes...</div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {gifts.map((gift) => (
+            {gifts.map((gift) => {
+              // Força o horário a ser UTC anexando o 'Z' para evitar erro de fuso horário no frontend
+              const isReserved = gift.reservedUntil ? new Date(gift.reservedUntil.endsWith('Z') ? gift.reservedUntil : gift.reservedUntil + 'Z') > new Date() : false;
+              const isUnavailable = gift.isPurchased || isReserved;
+
+              return (
               <div 
                 key={gift.id} 
-                className={`bg-white rounded-3xl overflow-hidden border border-stone-100 shadow-sm transition-all duration-300 ${gift.isPurchased ? 'opacity-50 grayscale' : 'hover:shadow-xl hover:-translate-y-1'}`}
+                className={`bg-white rounded-3xl overflow-hidden border border-stone-100 shadow-sm transition-all duration-300 ${isUnavailable ? 'opacity-50 grayscale' : 'hover:shadow-xl hover:-translate-y-1'}`}
               >
                 <div className="h-56 bg-stone-200 relative">
                   {gift.imageUrl ? (
@@ -148,11 +164,15 @@ export default function Presentes() {
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-stone-400 font-light">Sem imagem</div>
                   )}
-                  {gift.isPurchased && (
+                  {gift.isPurchased ? (
                     <div className="absolute inset-0 bg-white/60 flex items-center justify-center">
                       <span className="bg-stone-800 text-white px-6 py-2 rounded-full font-medium tracking-widest text-sm uppercase shadow-lg transform -rotate-12">Comprado</span>
                     </div>
-                  )}
+                  ) : isReserved ? (
+                    <div className="absolute inset-0 bg-white/60 flex items-center justify-center">
+                      <span className="bg-amber-500 text-white px-6 py-2 rounded-full font-medium tracking-widest text-sm uppercase shadow-lg transform -rotate-12">Reservado</span>
+                    </div>
+                  ) : null}
                 </div>
                 <div className="p-6">
                   <h3 className="text-xl font-serif text-stone-800 mb-2">{gift.title}</h3>
@@ -163,15 +183,15 @@ export default function Presentes() {
                     </span>
                     <button 
                       onClick={() => handleSelectGift(gift)}
-                      disabled={gift.isPurchased}
+                      disabled={isUnavailable}
                       className="bg-green-800 hover:bg-green-900 text-white px-6 py-2 rounded-xl text-sm font-medium transition-colors disabled:bg-stone-400 disabled:cursor-not-allowed"
                     >
-                      {gift.isPurchased ? 'Indisponível' : 'Presentear'}
+                      {gift.isPurchased ? 'Indisponível' : isReserved ? 'Aguardando Pagto' : 'Presentear'}
                     </button>
                   </div>
                 </div>
               </div>
-            ))}
+            )})}
           </div>
         )}
 
@@ -203,7 +223,7 @@ export default function Presentes() {
 
             <div className="mb-6">
               <label className="block text-xs font-semibold text-stone-500 uppercase tracking-widest mb-2">Seu Telefone (WhatsApp com DDD)</label>
-              <input type="tel" value={buyerPhone} onChange={(e) => setBuyerPhone(e.target.value)} placeholder="Ex: 11999999999" className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:outline-none focus:border-green-800 focus:ring-1 focus:ring-green-800 transition-all text-stone-700" required />
+              <input type="tel" value={buyerPhone} onChange={(e) => setBuyerPhone(formatPhoneNumber(e.target.value))} maxLength={15} placeholder="(11) 99999-9999" className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:outline-none focus:border-green-800 focus:ring-1 focus:ring-green-800 transition-all text-stone-700" required />
             </div>
 
             <div className="bg-stone-50 p-4 rounded-2xl mb-6 border border-stone-100">

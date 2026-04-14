@@ -28,7 +28,7 @@ public static class GiftEndpoints
             await db.SaveChangesAsync();
 
             return Results.Ok(new { Message = "Presente cadastrado com sucesso!", GiftId = gift.Id });
-        });
+        }).RequireAuthorization();
 
         app.MapPut("/api/gifts/{id:int}", async (int id, UpdateGiftRequest request, AppDbContext db) =>
         {
@@ -41,26 +41,48 @@ public static class GiftEndpoints
             gift.ImageUrl = request.ImageUrl;
             gift.IsPurchased = request.IsPurchased;
             gift.PurchasedBy = request.PurchasedBy;
+            if (request.IsPurchased) gift.ReservedUntil = null; // Se marcado como comprado, limpa a reserva
 
             await db.SaveChangesAsync();
             return Results.Ok(new { Message = "Presente atualizado com sucesso!" });
-        });
+        }).RequireAuthorization();
 
         app.MapPost("/api/gifts/{id:int}/purchase", async (int id, PurchaseGiftRequest request, AppDbContext db) =>
         {
             var gift = await db.Gifts.FindAsync(id);
             if (gift is null) return Results.NotFound(new { Message = "Presente não encontrado." });
             if (gift.IsPurchased) return Results.BadRequest(new { Message = "Este presente já foi comprado por outro convidado." });
+            if (gift.ReservedUntil.HasValue && gift.ReservedUntil.Value > DateTime.UtcNow) return Results.BadRequest(new { Message = "Este presente já está reservado aguardando confirmação de pagamento." });
 
             var family = await db.Families.FirstOrDefaultAsync(f => f.PhoneNumber == request.PhoneNumber);
             if (family is null) return Results.BadRequest("Telefone não encontrado na lista de convidados. Apenas convidados confirmados podem comprar presentes.");
 
-            gift.IsPurchased = true;
-            gift.PurchasedBy = family.Name; // Salva o nome da família no presente
+            gift.ReservedUntil = DateTime.UtcNow.AddHours(12);
+            gift.PurchasedBy = family.Name;
             await db.SaveChangesAsync();
 
-            return Results.Ok(new { Message = "Presente comprado com sucesso!" });
+            return Results.Ok(new { Message = "Presente reservado com sucesso!" });
         });
+
+        app.MapPost("/api/gifts/{id:int}/confirm-reservation", async (int id, AppDbContext db) =>
+        {
+            var gift = await db.Gifts.FindAsync(id);
+            if (gift is null) return Results.NotFound(new { Message = "Presente não encontrado." });
+            gift.IsPurchased = true;
+            gift.ReservedUntil = null;
+            await db.SaveChangesAsync();
+            return Results.Ok(new { Message = "Pagamento confirmado com sucesso!" });
+        }).RequireAuthorization();
+
+        app.MapPost("/api/gifts/{id:int}/cancel-reservation", async (int id, AppDbContext db) =>
+        {
+            var gift = await db.Gifts.FindAsync(id);
+            if (gift is null) return Results.NotFound(new { Message = "Presente não encontrado." });
+            gift.ReservedUntil = null;
+            gift.PurchasedBy = null;
+            await db.SaveChangesAsync();
+            return Results.Ok(new { Message = "Reserva cancelada com sucesso!" });
+        }).RequireAuthorization();
 
         app.MapDelete("/api/gifts/{id:int}", async (int id, AppDbContext db) =>
         {
@@ -71,7 +93,7 @@ public static class GiftEndpoints
             await db.SaveChangesAsync();
 
             return Results.Ok(new { Message = "Presente excluído com sucesso!" });
-        });
+        }).RequireAuthorization();
     }
 }
 

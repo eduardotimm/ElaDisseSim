@@ -22,6 +22,7 @@ interface Gift {
   imageUrl: string | null;
   isPurchased: boolean;
   purchasedBy?: string | null;
+  reservedUntil?: string | null;
 }
 
 interface Vendor {
@@ -32,15 +33,26 @@ interface Vendor {
   isPerPerson: boolean;
   paidAmount?: number | null;
   dueDate?: string | null;
-  isHired: boolean;
+  paymentDate?: string | null;
+  installments?: number | null;
+  paidInstallments?: number | null;
+  status: string;
+  considerCost: boolean;
   phone?: string | null;
   notes?: string | null;
 }
 
+interface Faq {
+  id: number;
+  question: string;
+  answer: string;
+}
+
 export default function Admin() {
   const navigate = useNavigate();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [activeTab, setActiveTab] = useState<'convidados' | 'presentes' | 'fornecedores' | 'financeiro'>('convidados');
+  const [token, setToken] = useState<string | null>(localStorage.getItem('adminToken'));
+  const [isAuthenticated, setIsAuthenticated] = useState(!!token);
+  const [activeTab, setActiveTab] = useState<'convidados' | 'presentes' | 'fornecedores' | 'financeiro' | 'faq' | 'calendario'>('convidados');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -76,13 +88,45 @@ export default function Admin() {
   const [vendorIsPerPerson, setVendorIsPerPerson] = useState(false);
   const [vendorPaidAmount, setVendorPaidAmount] = useState<number | ''>('');
   const [vendorDueDate, setVendorDueDate] = useState('');
-  const [vendorIsHired, setVendorIsHired] = useState(false);
+  const [vendorPaymentDate, setVendorPaymentDate] = useState('');
+  const [vendorInstallments, setVendorInstallments] = useState<number | ''>('');
+  const [vendorPaidInstallments, setVendorPaidInstallments] = useState<number | ''>('');
+  const [vendorStatus, setVendorStatus] = useState('A Consultar');
+  const [vendorConsiderCost, setVendorConsiderCost] = useState(true);
   const [vendorPhone, setVendorPhone] = useState('');
   const [vendorNotes, setVendorNotes] = useState('');
 
+  // Estados do Modal e Formulário de FAQ
+  const [faqs, setFaqs] = useState<Faq[]>([]);
+  const [isFaqModalOpen, setIsFaqModalOpen] = useState(false);
+  const [editingFaqId, setEditingFaqId] = useState<number | null>(null);
+  const [faqQuestion, setFaqQuestion] = useState('');
+  const [faqAnswer, setFaqAnswer] = useState('');
+
+  // Estado do Calendário
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+
+  // Função para formatar o telefone no padrão (11) 99999-9999 dinamicamente
+  const formatPhoneNumber = (value: string) => {
+    if (!value) return '';
+    const cleaned = value.replace(/\D/g, '').slice(0, 11);
+    if (cleaned.length === 0) return '';
+    if (cleaned.length <= 2) return `(${cleaned}`;
+    if (cleaned.length <= 7) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`;
+    return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
+  };
+
   const fetchFamilies = async () => {
     try {
-      const response = await fetch('http://localhost:5062/api/families');
+      const response = await fetch('http://localhost:5062/api/families', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.status === 401) {
+        localStorage.removeItem('adminToken');
+        setToken(null);
+        setIsAuthenticated(false);
+        return;
+      }
       if (response.ok) {
         const data = await response.json();
         setFamilies(data);
@@ -109,7 +153,9 @@ export default function Admin() {
 
   const fetchVendors = async () => {
     try {
-      const response = await fetch('http://localhost:5062/api/vendors');
+      const response = await fetch('http://localhost:5062/api/vendors', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       if (response.ok) {
         const data = await response.json();
         setVendors(data);
@@ -119,11 +165,24 @@ export default function Admin() {
     }
   };
 
+  const fetchFaqs = async () => {
+    try {
+      const response = await fetch('http://localhost:5062/api/faqs');
+      if (response.ok) {
+        const data = await response.json();
+        setFaqs(data);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar FAQs:', error);
+    }
+  };
+
   useEffect(() => {
     if (isAuthenticated) {
       fetchFamilies();
       fetchGifts();
       fetchVendors();
+      fetchFaqs();
     }
   }, [isAuthenticated]);
 
@@ -146,7 +205,7 @@ export default function Admin() {
   const openEditModal = (family: Family) => {
     setEditingFamilyId(family.id);
     setFamilyName(family.name);
-    setPhoneNumber(family.phoneNumber);
+    setPhoneNumber(formatPhoneNumber(family.phoneNumber));
     setGuests(family.guests && family.guests.length > 0 ? family.guests : [{ name: '', isConfirmed: null }]);
     setIsModalOpen(true);
   };
@@ -181,7 +240,11 @@ export default function Admin() {
     setVendorIsPerPerson(false);
     setVendorPaidAmount('');
     setVendorDueDate('');
-    setVendorIsHired(false);
+    setVendorPaymentDate('');
+    setVendorInstallments('');
+    setVendorPaidInstallments('');
+    setVendorStatus('A Consultar');
+    setVendorConsiderCost(true);
     setVendorPhone('');
     setVendorNotes('');
     setIsVendorModalOpen(true);
@@ -195,10 +258,29 @@ export default function Admin() {
     setVendorIsPerPerson(vendor.isPerPerson || false);
     setVendorPaidAmount(vendor.paidAmount ?? '');
     setVendorDueDate(vendor.dueDate || '');
-    setVendorIsHired(vendor.isHired);
-    setVendorPhone(vendor.phone || '');
+    setVendorPaymentDate(vendor.paymentDate || '');
+    setVendorInstallments(vendor.installments || '');
+    setVendorPaidInstallments(vendor.paidInstallments ?? 0);
+    // Fallback caso a migração do C# não tenha rodado
+    setVendorStatus(vendor.status || ((vendor as any).isHired ? 'Contratado' : 'A Consultar'));
+    setVendorConsiderCost(vendor.considerCost ?? true);
+    setVendorPhone(formatPhoneNumber(vendor.phone || ''));
     setVendorNotes(vendor.notes || '');
     setIsVendorModalOpen(true);
+  };
+
+  const openCreateFaqModal = () => {
+    setEditingFaqId(null);
+    setFaqQuestion('');
+    setFaqAnswer('');
+    setIsFaqModalOpen(true);
+  };
+
+  const openEditFaqModal = (faq: Faq) => {
+    setEditingFaqId(faq.id);
+    setFaqQuestion(faq.question);
+    setFaqAnswer(faq.answer);
+    setIsFaqModalOpen(true);
   };
 
   const handleAddGuest = () => {
@@ -229,11 +311,15 @@ export default function Admin() {
         ? `http://localhost:5062/api/families/${editingFamilyId}`
         : 'http://localhost:5062/api/families';
       const method = editingFamilyId ? 'PUT' : 'POST';
-      const bodyData = { familyName, phoneNumber, guests: guests.filter(g => g.name.trim() !== '') };
+      const cleanPhone = phoneNumber.replace(/\D/g, ''); // Remove máscara para salvar no banco
+      const bodyData = { familyName, phoneNumber: cleanPhone, guests: guests.filter(g => g.name.trim() !== '') };
 
       const response = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(bodyData)
       });
       
@@ -259,7 +345,8 @@ export default function Admin() {
 
     try {
       const response = await fetch(`http://localhost:5062/api/families/${id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
       });
 
       if (response.ok) {
@@ -274,13 +361,45 @@ export default function Admin() {
     }
   };
 
+  const handleExportToCSV = () => {
+    // Cabeçalho do CSV
+    let csvContent = "Núcleo Familiar,Telefone,Convidado,Status de Confirmação\n";
+
+    // Percorre as famílias e seus convidados para montar as linhas
+    families.forEach(family => {
+      family.guests.forEach(guest => {
+        const familyName = `"${family.name.replace(/"/g, '""')}"`; // Escapa aspas
+        const phone = `"${family.phoneNumber}"`;
+        const guestName = `"${guest.name.replace(/"/g, '""')}"`;
+        let status = "Pendente";
+        if (guest.isConfirmed === true) status = "Confirmado";
+        if (guest.isConfirmed === false) status = "Não Vai";
+
+        csvContent += `${familyName},${phone},${guestName},${status}\n`;
+      });
+    });
+
+    // \ufeff é o BOM (Byte Order Mark) para o Excel entender UTF-8 (Acentuação)
+    const blob = new Blob(["\ufeff", csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "lista_de_convidados.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleConfirmAllGuests = async () => {
     if (!window.confirm('Tem certeza que deseja confirmar a presença de TODOS os convidados cadastrados de uma vez?')) {
       return;
     }
     setIsSubmitting(true);
     try {
-      const response = await fetch('http://localhost:5062/api/families/confirm-all', { method: 'PUT' });
+      const response = await fetch('http://localhost:5062/api/families/confirm-all', { 
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       
       if (response.ok) {
         alert('A presença de todos os convidados foi confirmada com sucesso!');
@@ -310,12 +429,15 @@ export default function Admin() {
         price: Number(giftPrice),
         imageUrl: giftImageUrl || null,
         isPurchased: giftIsPurchased,
-        purchasedBy: giftIsPurchased ? (giftPurchasedBy || null) : null
+        purchasedBy: giftPurchasedBy || null
       };
 
       const response = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(bodyData)
       });
       
@@ -339,12 +461,47 @@ export default function Admin() {
       return;
     }
     try {
-      const response = await fetch(`http://localhost:5062/api/gifts/${id}`, { method: 'DELETE' });
+      const response = await fetch(`http://localhost:5062/api/gifts/${id}`, { 
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       if (response.ok) fetchGifts();
       else alert('Erro ao excluir: ' + await response.text());
     } catch (error) {
       console.error('Erro ao excluir presente:', error);
       alert('Erro de conexão com o servidor.');
+    }
+  };
+
+  const handleConfirmReservation = async (id: number) => {
+    if (!window.confirm('Confirmar o recebimento do PIX e marcar este presente como Comprado?')) return;
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`http://localhost:5062/api/gifts/${id}/confirm-reservation`, { 
+        method: 'POST', headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) fetchGifts();
+      else alert('Erro ao confirmar: ' + await response.text());
+    } catch (error) {
+      alert('Erro de conexão com o servidor ao confirmar pagamento.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCancelReservation = async (id: number) => {
+    if (!window.confirm('Cancelar a reserva e disponibilizar o presente novamente?')) return;
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`http://localhost:5062/api/gifts/${id}/cancel-reservation`, { 
+        method: 'POST', headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) fetchGifts();
+      else alert('Erro ao cancelar: ' + await response.text());
+    } catch (error) {
+      alert('Erro de conexão com o servidor ao cancelar reserva.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -356,6 +513,15 @@ export default function Admin() {
         ? `http://localhost:5062/api/vendors/${editingVendorId}`
         : 'http://localhost:5062/api/vendors';
       const method = editingVendorId ? 'PUT' : 'POST';
+
+      let finalStatus = vendorStatus;
+      const total = vendorTotalAmount === '' ? 0 : Number(vendorTotalAmount);
+      const paid = vendorPaidAmount === '' ? 0 : Number(vendorPaidAmount);
+      // Regra automática do Quitado
+      if (total > 0 && paid >= total && finalStatus !== 'Quitado') {
+        finalStatus = 'Quitado';
+      }
+
       const bodyData = {
         name: vendorName,
         category: vendorCategory || null,
@@ -363,14 +529,21 @@ export default function Admin() {
         isPerPerson: vendorIsPerPerson,
         paidAmount: vendorPaidAmount === '' ? null : Number(vendorPaidAmount),
         dueDate: vendorDueDate || null,
-        isHired: vendorIsHired,
-        phone: vendorPhone || null,
+        paymentDate: vendorPaymentDate || null,
+        installments: vendorInstallments === '' ? null : Number(vendorInstallments),
+        paidInstallments: vendorPaidInstallments === '' ? 0 : Number(vendorPaidInstallments),
+        status: finalStatus,
+        considerCost: vendorConsiderCost,
+        phone: vendorPhone ? vendorPhone.replace(/\D/g, '') : null, // Remove máscara para salvar no banco
         notes: vendorNotes || null
       };
 
       const response = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(bodyData)
       });
       
@@ -394,7 +567,10 @@ export default function Admin() {
       return;
     }
     try {
-      const response = await fetch(`http://localhost:5062/api/vendors/${id}`, { method: 'DELETE' });
+      const response = await fetch(`http://localhost:5062/api/vendors/${id}`, { 
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       if (response.ok) fetchVendors();
       else alert('Erro ao excluir: ' + await response.text());
     } catch (error) {
@@ -403,14 +579,151 @@ export default function Admin() {
     }
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handlePayParcel = async (vendorId: number, parcelAmount: number) => {
+    const vendor = vendors.find(v => v.id === vendorId);
+    if (!vendor) return;
+
+    if (!window.confirm(`Deseja confirmar o pagamento desta parcela no valor de ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(parcelAmount)}?\nO valor será somado automaticamente ao total já pago do fornecedor.`)) return;
+
+    setIsSubmitting(true);
+    try {
+      const newPaidAmount = (vendor.paidAmount || 0) + parcelAmount;
+      const newPaidInstallments = (vendor.paidInstallments || 0) + 1;
+
+      let finalStatus = vendor.status || 'A Consultar';
+      const total = vendor.totalAmount || 0;
+      if (total > 0 && newPaidAmount >= total) {
+        finalStatus = 'Quitado';
+      }
+
+      const bodyData = {
+        name: vendor.name,
+        category: vendor.category || null,
+        totalAmount: vendor.totalAmount,
+        isPerPerson: vendor.isPerPerson,
+        paidAmount: newPaidAmount,
+        dueDate: vendor.dueDate || null,
+        paymentDate: vendor.paymentDate || null,
+        installments: vendor.installments,
+        paidInstallments: newPaidInstallments,
+        status: finalStatus,
+        considerCost: vendor.considerCost ?? true,
+        phone: vendor.phone ? vendor.phone.replace(/\D/g, '') : null,
+        notes: vendor.notes || null
+      };
+
+      const response = await fetch(`http://localhost:5062/api/vendors/${vendorId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(bodyData)
+      });
+
+      if (response.ok) {
+        fetchVendors();
+      } else {
+        alert('Erro ao registrar pagamento: ' + await response.text());
+      }
+    } catch (err) {
+      alert('Erro de conexão com o servidor ao processar pagamento.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSaveFaq = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Validação Hardcoded
-    if (username === 'Tovom' && password === 'XingLing12#') {
-      setIsAuthenticated(true);
-      setError('');
-    } else {
-      setError('Usuário ou senha incorretos.');
+    setIsSubmitting(true);
+    try {
+      const url = editingFaqId 
+        ? `http://localhost:5062/api/faqs/${editingFaqId}`
+        : 'http://localhost:5062/api/faqs';
+      const method = editingFaqId ? 'PUT' : 'POST';
+      const bodyData = { question: faqQuestion, answer: faqAnswer };
+
+      const response = await fetch(url, {
+        method,
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(bodyData)
+      });
+      
+      if (response.ok) {
+        alert(editingFaqId ? 'FAQ atualizada com sucesso!' : 'FAQ cadastrada com sucesso!');
+        setIsFaqModalOpen(false);
+        fetchFaqs();
+      } else {
+        alert('Erro do Servidor: ' + await response.text());
+      }
+    } catch (err) {
+      alert('Erro ao conectar com o servidor.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const moveFaq = async (index: number, direction: number) => {
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= faqs.length) return;
+    
+    const newFaqs = [...faqs];
+    const temp = newFaqs[index];
+    newFaqs[index] = newFaqs[newIndex];
+    newFaqs[newIndex] = temp;
+    setFaqs(newFaqs); // Atualiza UI instantaneamente
+
+    try {
+      await fetch('http://localhost:5062/api/faqs/reorder', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(newFaqs.map(f => f.id))
+      });
+    } catch (e) {
+      console.error('Erro ao reordenar', e);
+    }
+  };
+
+  const handleDeleteFaq = async (id: number) => {
+    if (!window.confirm('Tem certeza que deseja excluir esta pergunta?')) return;
+    try {
+      const response = await fetch(`http://localhost:5062/api/faqs/${id}`, { 
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) fetchFaqs();
+      else alert('Erro ao excluir: ' + await response.text());
+    } catch (error) {
+      alert('Erro de conexão com o servidor.');
+    }
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError('');
+
+    try {
+      const response = await fetch('http://localhost:5062/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        localStorage.setItem('adminToken', data.token);
+        setToken(data.token);
+        setIsAuthenticated(true);
+      } else if (response.status === 429) {
+        setError('Muitas tentativas falhas. O login foi bloqueado por 5 minutos.');
+      } else {
+        setError('Usuário ou senha incorretos.');
+      }
+    } catch (error) {
+      setError('Erro ao conectar com o servidor.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -441,8 +754,8 @@ export default function Admin() {
             />
             {error && <p className="text-red-500 text-sm font-medium mt-1">{error}</p>}
             
-            <button type="submit" className="w-full bg-slate-800 hover:bg-slate-900 text-white font-serif tracking-widest text-lg py-3 rounded-xl shadow-md transition-all transform hover:-translate-y-0.5 mt-2">
-              Entrar
+            <button type="submit" disabled={isSubmitting} className="w-full bg-slate-800 hover:bg-slate-900 text-white font-serif tracking-widest text-lg py-3 rounded-xl shadow-md transition-all transform hover:-translate-y-0.5 mt-2 disabled:opacity-50">
+              {isSubmitting ? 'Verificando...' : 'Entrar'}
             </button>
           </form>
           
@@ -481,16 +794,31 @@ export default function Admin() {
           Gestão de Fornecedores
         </button>
         <button 
+          onClick={() => setActiveTab('calendario')}
+          className={`w-full text-left px-4 py-3 rounded-xl transition-colors ${activeTab === 'calendario' ? 'bg-slate-100 text-slate-900 font-medium' : 'text-slate-500 hover:bg-slate-50'}`}
+        >
+          Calendário de Eventos
+        </button>
+        <button 
           onClick={() => setActiveTab('financeiro')}
           className={`w-full text-left px-4 py-3 rounded-xl transition-colors ${activeTab === 'financeiro' ? 'bg-slate-100 text-slate-900 font-medium' : 'text-slate-500 hover:bg-slate-50'}`}
         >
           Dashboard Financeiro
+        </button>
+        <button 
+          onClick={() => setActiveTab('faq')}
+          className={`w-full text-left px-4 py-3 rounded-xl transition-colors ${activeTab === 'faq' ? 'bg-slate-100 text-slate-900 font-medium' : 'text-slate-500 hover:bg-slate-50'}`}
+        >
+          Gestão de FAQ
         </button>
         </nav>
         <div className="p-4 border-t border-slate-100">
           <button onClick={() => navigate('/')} className="w-full text-left px-4 py-3 text-slate-400 hover:text-slate-700 transition-colors uppercase tracking-widest text-xs font-bold">
             ← Voltar ao Site
           </button>
+        <button onClick={() => { localStorage.removeItem('adminToken'); setToken(null); setIsAuthenticated(false); }} className="w-full text-left px-4 py-3 text-red-400 hover:text-red-600 transition-colors uppercase tracking-widest text-xs font-bold mt-2">
+          Sair do Painel
+        </button>
         </div>
       </aside>
 
@@ -502,7 +830,10 @@ export default function Admin() {
           <div className="max-w-6xl mx-auto animate-fade-in">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
               <h2 className="text-3xl font-serif text-slate-800">Famílias & Convidados</h2>
-              <div className="flex gap-3">
+              <div className="flex flex-wrap gap-3">
+                <button onClick={handleExportToCSV} className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-6 py-3 rounded-xl shadow-sm transition-all font-medium">
+                  ↓ Exportar CSV
+                </button>
                 <button onClick={handleConfirmAllGuests} disabled={isSubmitting} className="bg-green-700 hover:bg-green-800 text-white px-6 py-3 rounded-xl shadow-md transition-all transform hover:-translate-y-0.5 font-medium disabled:opacity-50">
                   Confirmar Todos
                 </button>
@@ -599,7 +930,9 @@ export default function Admin() {
                       <td colSpan={4} className="p-5 text-center text-slate-500">Nenhum presente cadastrado ainda.</td>
                     </tr>
                   ) : (
-                    gifts.map((gift) => (
+                    gifts.map((gift) => {
+                      const isReserved = gift.reservedUntil ? new Date(gift.reservedUntil.endsWith('Z') ? gift.reservedUntil : gift.reservedUntil + 'Z') > new Date() : false;
+                      return (
                       <tr key={gift.id} className="hover:bg-slate-50 transition-colors">
                         <td className="p-5 text-slate-800 font-medium">
                           <div className="flex items-center gap-3">
@@ -616,6 +949,15 @@ export default function Admin() {
                               <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">Comprado</span>
                               {gift.purchasedBy && <span className="text-[10px] text-slate-400 mt-1 text-center">por {gift.purchasedBy}</span>}
                             </div>
+                          ) : isReserved ? (
+                            <div className="flex flex-col items-center">
+                              <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-full">Aguardando PIX</span>
+                              {gift.purchasedBy && <span className="text-[10px] text-slate-400 mt-1 text-center">de {gift.purchasedBy}</span>}
+                              <div className="flex gap-2 mt-3">
+                                <button disabled={isSubmitting} onClick={() => handleConfirmReservation(gift.id)} className="text-[10px] bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 font-medium transition-colors shadow-sm disabled:opacity-50">Aprovar</button>
+                                <button disabled={isSubmitting} onClick={() => handleCancelReservation(gift.id)} className="text-[10px] bg-red-500 text-white px-3 py-1.5 rounded-lg hover:bg-red-600 font-medium transition-colors shadow-sm disabled:opacity-50">Cancelar</button>
+                              </div>
+                            </div>
                           ) : (
                             <span className="px-2 py-1 bg-slate-100 text-slate-500 text-xs font-bold rounded-full">Disponível</span>
                           )}
@@ -625,7 +967,7 @@ export default function Admin() {
                           <button onClick={() => handleDeleteGift(gift.id)} className="text-red-500 hover:text-red-700 font-medium text-sm transition-colors">Excluir</button>
                         </td>
                       </tr>
-                    ))
+                    )})
                   )}
                 </tbody>
               </table>
@@ -676,13 +1018,21 @@ export default function Admin() {
                             </span>
                             {vendor.isPerPerson && vendor.totalAmount && <span className="text-[10px] text-slate-400 mt-0.5">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(vendor.totalAmount)} p/ pessoa</span>}
                             {vendor.paidAmount != null && vendor.paidAmount > 0 && <span className="text-xs text-green-600 font-normal mt-0.5">Pago: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(vendor.paidAmount)}</span>}
+                            {vendor.paymentDate && <span className="text-[10px] text-rose-500 font-medium mt-1 uppercase tracking-wider">A Partir de: {new Date(vendor.paymentDate + 'T12:00:00').toLocaleDateString('pt-BR')} {vendor.installments && vendor.installments > 1 ? `(${vendor.paidInstallments || 0}/${vendor.installments} pagas)` : ''}</span>}
                           </div>
                         </td>
-                        <td className="p-5 text-center">
-                          {vendor.isHired ? (
-                            <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">Fechado</span>
-                          ) : (
-                            <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-full">Em Orçamento</span>
+                        <td className="p-5 text-center flex flex-col items-center justify-center h-full min-h-[5rem]">
+                          {(() => {
+                            const s = vendor.status || ((vendor as any).isHired ? 'Contratado' : 'A Consultar');
+                            if (s === 'A Consultar') return <span className="px-2 py-1 bg-rose-100 text-rose-700 text-xs font-bold rounded-full">{s}</span>;
+                            if (s === 'Em Orçamento') return <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-full">{s}</span>;
+                            if (s === 'Aguardando Contrato') return <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded-full">Aguard. Contrato</span>;
+                            if (s === 'Contratado') return <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded-full">{s}</span>;
+                            if (s === 'Quitado') return <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full">{s}</span>;
+                            return <span className="px-2 py-1 bg-slate-100 text-slate-700 text-xs font-bold rounded-full">{s}</span>;
+                          })()}
+                          {vendor.considerCost === false && (
+                            <div className="mt-2"><span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold" title="Não contabilizado no Dashboard">Ignorado</span></div>
                           )}
                         </td>
                         <td className="p-5 text-right">
@@ -705,28 +1055,53 @@ export default function Admin() {
               <h2 className="text-3xl font-serif text-slate-800">Dashboard Financeiro</h2>
             </div>
 
+            {(() => {
+              const custoPrevisto = vendors
+                .filter(v => v.considerCost ?? true) // Agora considera TODOS que tiverem o toggle ativado, independente do status
+                .reduce((acc, v) => acc + (v.isPerPerson ? (v.totalAmount || 0) * totalConfirmedGuests : (v.totalAmount || 0)), 0);
+
+              const custoReal = vendors
+                .filter(v => (v.considerCost ?? true) && ['Aguardando Contrato', 'Contratado', 'Quitado'].includes(v.status || ''))
+                .reduce((acc, v) => acc + (v.isPerPerson ? (v.totalAmount || 0) * totalConfirmedGuests : (v.totalAmount || 0)), 0);
+
+              const totalPago = vendors
+                .filter(v => v.considerCost ?? true)
+                .reduce((acc, v) => acc + (v.paidAmount || 0), 0);
+
+              const faltaPagarReal = Math.max(0, custoReal - totalPago);
+
+              return (
+                <>
             {/* Resumo em Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
               <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                <h3 className="text-sm font-medium text-slate-500 uppercase tracking-widest mb-1">Custo Estimado Total</h3>
+                <h3 className="text-sm font-medium text-slate-500 uppercase tracking-widest mb-1">Custo Previsto</h3>
                 <p className="text-3xl font-serif text-slate-800">
-                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(vendors.reduce((acc, v) => acc + (v.isPerPerson ? (v.totalAmount || 0) * totalConfirmedGuests : (v.totalAmount || 0)), 0))}
+                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(custoPrevisto)}
                 </p>
+                <p className="text-[10px] leading-tight text-slate-400 mt-2">Inclui orçamentos e contratos</p>
               </div>
               <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                <h3 className="text-sm font-medium text-slate-500 uppercase tracking-widest mb-1">Total Já Pago</h3>
+                <h3 className="text-sm font-medium text-slate-500 uppercase tracking-widest mb-1">Custo Real</h3>
+                <p className="text-3xl font-serif text-slate-800">
+                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(custoReal)}
+                </p>
+                <p className="text-[10px] leading-tight text-slate-400 mt-2">Apenas contratos fechados</p>
+              </div>
+              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <h3 className="text-sm font-medium text-slate-500 uppercase tracking-widest mb-1">Total Pago</h3>
                 <p className="text-3xl font-serif text-green-600">
-                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(vendors.reduce((acc, v) => acc + (v.paidAmount || 0), 0))}
+                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalPago)}
                 </p>
               </div>
               <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                <h3 className="text-sm font-medium text-slate-500 uppercase tracking-widest mb-1">Falta Pagar</h3>
+                <h3 className="text-sm font-medium text-slate-500 uppercase tracking-widest mb-1">Falta Pagar (Real)</h3>
                 <p className="text-3xl font-serif text-red-500">
-                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-                    vendors.reduce((acc, v) => acc + (v.isPerPerson ? (v.totalAmount || 0) * totalConfirmedGuests : (v.totalAmount || 0)), 0) - vendors.reduce((acc, v) => acc + (v.paidAmount || 0), 0)
-                  )}
+                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(faltaPagarReal)}
                 </p>
               </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
               <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                 <h3 className="text-sm font-medium text-slate-500 uppercase tracking-widest mb-1">Presentes Recebidos</h3>
                 <p className="text-3xl font-serif text-blue-600">
@@ -746,7 +1121,7 @@ export default function Admin() {
                     (() => {
                       const categoriasVariaveis = ['buffet', 'papelaria', 'lembrancinhas', 'lembrancinha', 'doces'];
                       const custoVariavel = vendors
-                        .filter(v => v.category && categoriasVariaveis.includes(v.category.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()))
+                        .filter(v => (v.considerCost ?? true) && v.category && categoriasVariaveis.includes(v.category.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()))
                         .reduce((acc, v) => acc + (v.isPerPerson ? (v.totalAmount || 0) * totalConfirmedGuests : (v.totalAmount || 0)), 0);
                       return totalConfirmedGuests > 0 ? custoVariavel / totalConfirmedGuests : 0;
                     })()
@@ -755,8 +1130,11 @@ export default function Admin() {
                 <p className="text-[10px] leading-tight text-slate-400 mt-2">Apenas Buffet, Decoração, Papelaria e Lembrancinhas</p>
               </div>
             </div>
+                </>
+              );
+            })()}
 
-            <h3 className="text-2xl font-serif text-slate-800 mb-6">Balanço por Família (Brincadeira)</h3>
+            <h3 className="text-2xl font-serif text-slate-800 mb-6">Balanço por Família</h3>
             <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden overflow-x-auto">
               <table className="w-full text-left border-collapse min-w-max">
                 <thead>
@@ -772,7 +1150,7 @@ export default function Admin() {
                   {(() => {
                     const categoriasVariaveis = ['buffet', 'decoracao', 'papelaria', 'lembrancinhas', 'lembrancinha'];
                     const custoVariavel = vendors
-                      .filter(v => v.category && categoriasVariaveis.includes(v.category.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()))
+                      .filter(v => (v.considerCost ?? true) && ['Aguardando Contrato', 'Contratado', 'Quitado'].includes(v.status || '') && v.category && categoriasVariaveis.includes(v.category.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()))
                       .reduce((acc, v) => acc + (v.isPerPerson ? (v.totalAmount || 0) * totalConfirmedGuests : (v.totalAmount || 0)), 0);
                     const mediaPorConvidado = totalConfirmedGuests > 0 ? custoVariavel / totalConfirmedGuests : 0;
 
@@ -806,6 +1184,179 @@ export default function Admin() {
           </div>
         )}
 
+        {/* Aba: Gestão de FAQ */}
+        {activeTab === 'faq' && (
+          <div className="max-w-6xl mx-auto animate-fade-in">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
+              <h2 className="text-3xl font-serif text-slate-800">Dúvidas Frequentes (FAQ)</h2>
+              <button onClick={openCreateFaqModal} className="bg-slate-800 hover:bg-slate-900 text-white px-6 py-3 rounded-xl shadow-md transition-all transform hover:-translate-y-0.5 font-medium">
+                + Cadastrar Pergunta
+              </button>
+            </div>
+
+            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-max">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase tracking-widest">
+                    <th className="p-5 font-semibold w-12 text-center">Ordem</th>
+                    <th className="p-5 font-semibold w-1/3">Pergunta</th>
+                    <th className="p-5 font-semibold">Resposta</th>
+                    <th className="p-5 font-semibold text-right w-32 sticky right-0 bg-slate-50 border-l border-slate-200 z-10 shadow-[-4px_0_6px_-4px_rgba(0,0,0,0.05)]">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {faqs.length === 0 ? (
+                    <tr>
+                      <td colSpan={3} className="p-5 text-center text-slate-500">Nenhuma dúvida cadastrada ainda.</td>
+                    </tr>
+                  ) : (
+                    faqs.map((faq, index) => (
+                      <tr key={faq.id} className="group hover:bg-slate-50 transition-colors">
+                        <td className="p-5 text-center border-r border-slate-100">
+                          <div className="flex flex-col items-center gap-1">
+                            <button onClick={() => moveFaq(index, -1)} disabled={index === 0} className="text-slate-400 hover:text-slate-800 disabled:opacity-20" title="Mover para cima">▲</button>
+                            <button onClick={() => moveFaq(index, 1)} disabled={index === faqs.length - 1} className="text-slate-400 hover:text-slate-800 disabled:opacity-20" title="Mover para baixo">▼</button>
+                          </div>
+                        </td>
+                        <td className="p-5 text-slate-800 font-medium whitespace-pre-wrap">{faq.question}</td>
+                        <td className="p-5 text-slate-500 whitespace-pre-wrap">{faq.answer}</td>
+                        <td className="p-5 text-right sticky right-0 bg-white group-hover:bg-slate-50 transition-colors border-l border-slate-100 z-10 shadow-[-4px_0_6px_-4px_rgba(0,0,0,0.05)]">
+                          <button onClick={() => openEditFaqModal(faq)} className="text-blue-600 hover:text-blue-800 font-medium text-sm mr-4 transition-colors">Editar</button>
+                          <button onClick={() => handleDeleteFaq(faq.id)} className="text-red-500 hover:text-red-700 font-medium text-sm transition-colors">Excluir</button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Aba: Calendário */}
+        {activeTab === 'calendario' && (() => {
+          const startOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+          const endOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+          const startDay = startOfMonth.getDay(); // 0 = Dom
+          const daysInMonth = endOfMonth.getDate();
+          
+          const today = new Date();
+          const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+          const weddingDateStr = '2027-08-21';
+          
+          const monthName = currentMonth.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+          const capitalizedMonthName = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+
+          // Expande os eventos baseados em parcelas e aplica a fórmula exata de saldo devedor
+          const paymentEvents: { vendorId: number; name: string; date: string; dateObj: Date; title: string; amount: number; isPaid: boolean }[] = [];
+          vendors.forEach(v => {
+            if (!v.paymentDate) return;
+            const parcels = v.installments && v.installments > 0 ? v.installments : 1;
+            const paidParcels = v.paidInstallments || 0;
+            const [year, month, day] = v.paymentDate.split('-').map(Number);
+            
+            const totalAmount = v.isPerPerson ? (v.totalAmount || 0) * totalConfirmedGuests : (v.totalAmount || 0);
+            const paidAmount = v.paidAmount || 0; 
+
+            // A MÁGICA: Valor da parcela = Saldo devedor / Parcelas que faltam pagar
+            const parcelAmount = parcels > paidParcels ? (totalAmount - paidAmount) / (parcels - paidParcels) : 0;
+
+            for (let i = 0; i < parcels; i++) {
+              const d = new Date(year, month - 1 + i, day, 12, 0, 0); // Avança os meses usando comportamento nativo do JS
+              const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+              const title = parcels > 1 ? `💸 ${v.name} (${i + 1}/${parcels})` : `💸 ${v.name}`;
+
+              const isPaid = i < paidParcels;
+              paymentEvents.push({ vendorId: v.id, name: v.name, date: dateStr, dateObj: d, title, amount: parcelAmount, isPaid });
+            }
+          });
+
+          const getEventsForDate = (day: number) => {
+            const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const dayEvents: any[] = [];
+            if (dateStr === weddingDateStr) dayEvents.push({ type: 'wedding', title: '💍 O Grande Dia!' });
+            
+            paymentEvents.filter(e => e.date === dateStr).forEach(e => {
+              dayEvents.push({ type: 'payment', title: e.title, isPaid: e.isPaid });
+            });
+            return dayEvents;
+          };
+
+          return (
+            <div className="max-w-7xl mx-auto animate-fade-in">
+              <div className="flex justify-between items-center mb-10">
+                <h2 className="text-3xl font-serif text-slate-800">Calendário de Eventos</h2>
+                <div className="flex items-center gap-4 bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-200">
+                  <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} className="text-slate-400 hover:text-slate-800 transition-colors p-2">&lt;</button>
+                  <span className="font-medium text-slate-700 min-w-32 text-center">{capitalizedMonthName}</span>
+                  <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))} className="text-slate-400 hover:text-slate-800 transition-colors p-2">&gt;</button>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <div className="lg:col-span-3 bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
+                  <div className="grid grid-cols-7 gap-2 md:gap-4 mb-4">
+                    {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(d => <div key={d} className="text-center font-bold text-slate-400 text-xs md:text-sm uppercase tracking-wider">{d}</div>)}
+                  </div>
+                  <div className="grid grid-cols-7 gap-2 md:gap-4">
+                    {Array.from({ length: startDay }).map((_, i) => <div key={`empty-${i}`} className="p-2 md:p-4" />)}
+                    {Array.from({ length: daysInMonth }).map((_, i) => {
+                      const day = i + 1;
+                      const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                      const isToday = dateStr === todayStr;
+                      const evts = getEventsForDate(day);
+                      return (
+                        <div key={day} className={`min-h-24 md:min-h-28 p-2 md:p-3 rounded-xl border transition-all overflow-hidden ${isToday ? 'border-blue-300 bg-blue-50/50 shadow-inner' : 'border-slate-100 bg-slate-50/50'} ${evts.length > 0 ? 'ring-1 ring-slate-200 shadow-sm bg-white' : ''}`}>
+                          <div className={`text-xs md:text-sm font-semibold w-6 h-6 md:w-7 md:h-7 flex items-center justify-center rounded-full mb-1 md:mb-2 ${isToday ? 'bg-blue-600 text-white' : 'text-slate-700'}`}>{day}</div>
+                          <div className="space-y-1">
+                            {evts.map((e, idx) => (
+                              <div key={idx} className={`text-[9px] md:text-[10px] font-bold px-1.5 md:px-2 py-1 md:py-1.5 rounded-md md:rounded-lg leading-tight shadow-sm truncate ${e.type === 'wedding' ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white' : e.isPaid ? 'bg-emerald-50 text-emerald-600 border border-emerald-200 line-through opacity-70' : 'bg-rose-100 text-rose-700 border border-rose-200'}`}>
+                                {e.title}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 flex flex-col">
+                  <h3 className="text-lg font-serif text-slate-800 mb-6 border-b border-slate-100 pb-4">Próximos Pagamentos</h3>
+                  <div className="space-y-4 flex-1">
+                    {paymentEvents
+                      .filter(e => !e.isPaid && e.amount > 0)
+                      .sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime())
+                      .slice(0, 5)
+                      .map((e, idx) => (
+                          <div key={`${e.vendorId}-${idx}`} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100 hover:bg-slate-100 transition-colors">
+                            <div className="flex flex-col overflow-hidden pr-2">
+                              <span className="font-medium text-sm text-slate-700 truncate">{e.title.replace('💸 ', '')}</span>
+                              <span className={`text-[11px] mt-1 uppercase tracking-wider font-semibold ${e.dateObj < new Date(new Date().setHours(0,0,0,0)) ? 'text-red-500' : 'text-slate-500'}`}>
+                                {e.dateObj.toLocaleDateString('pt-BR')} {e.dateObj < new Date(new Date().setHours(0,0,0,0)) && '(Atrasado)'}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <span className="text-sm font-semibold text-rose-600 whitespace-nowrap">
+                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(e.amount)}
+                              </span>
+                              <button 
+                                onClick={() => handlePayParcel(e.vendorId, e.amount)}
+                                title="Confirmar pagamento"
+                                className="w-7 h-7 shrink-0 flex items-center justify-center bg-emerald-100 text-emerald-600 hover:bg-emerald-500 hover:text-white rounded-full transition-colors shadow-sm"
+                              >✓</button>
+                            </div>
+                          </div>
+                      ))
+                    }
+                    {paymentEvents.filter(e => !e.isPaid && e.amount > 0).length === 0 && (
+                      <p className="text-sm text-slate-400 text-center py-4">Nenhum pagamento agendado.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
       </main>
 
       {/* Modal de Cadastro de Nova Família */}
@@ -824,15 +1375,12 @@ export default function Admin() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">WhatsApp (Chefe da Família)</label>
-                <input type="tel" required value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)} placeholder="11999999999" className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-800" />
+                <input type="tel" required value={phoneNumber} onChange={e => setPhoneNumber(formatPhoneNumber(e.target.value))} maxLength={15} placeholder="(11) 99999-9999" className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-800" />
               </div>
 
               <div className="pt-4 border-t border-slate-100">
                 <div className="flex justify-between items-center mb-2">
                   <label className="block text-sm font-medium text-slate-700">Convidados ({guests.length}/6)</label>
-                  {guests.length < 6 && (
-                    <button type="button" onClick={handleAddGuest} className="text-sm text-blue-600 hover:text-blue-800 font-medium">+ Adicionar</button>
-                  )}
                 </div>
                 {guests.map((guest, index) => (
                   <div key={index} className="flex gap-2 mb-2">
@@ -853,6 +1401,9 @@ export default function Admin() {
                     )}
                   </div>
                 ))}
+                {guests.length < 6 && (
+                  <button type="button" onClick={handleAddGuest} className="mt-2 text-sm text-blue-600 hover:text-blue-800 font-medium w-full text-left">+ Adicionar acompanhante</button>
+                )}
               </div>
 
               <div className="pt-6 flex gap-3">
@@ -944,7 +1495,7 @@ export default function Admin() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Telefone/Contato</label>
-                  <input type="tel" value={vendorPhone} onChange={e => setVendorPhone(e.target.value)} placeholder="Ex: (11) 99999-9999" className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-800" />
+                  <input type="tel" value={vendorPhone} onChange={e => setVendorPhone(formatPhoneNumber(e.target.value))} maxLength={15} placeholder="Ex: (11) 99999-9999" className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-800" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -961,19 +1512,45 @@ export default function Admin() {
                   <input type="number" step="0.01" min="0" value={vendorPaidAmount} onChange={e => setVendorPaidAmount(e.target.value === '' ? '' : parseFloat(e.target.value))} placeholder="Ex: 500.00" className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-800" />
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Prazo de Pagamento</label>
-                <input type="text" value={vendorDueDate} onChange={e => setVendorDueDate(e.target.value)} placeholder="Ex: Metade até 10/10, restante na semana" className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-800" />
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1 text-truncate">Condições</label>
+                  <input type="text" value={vendorDueDate} onChange={e => setVendorDueDate(e.target.value)} placeholder="Ex: Assinatura..." className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-800" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1 text-truncate">1º Vencimento</label>
+                  <input type="date" value={vendorPaymentDate} onChange={e => setVendorPaymentDate(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-800" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1 text-truncate">Parcelas (Nº)</label>
+                  <input type="number" min="1" value={vendorInstallments} onChange={e => setVendorInstallments(e.target.value === '' ? '' : parseInt(e.target.value))} placeholder="Ex: 1" className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-800" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1 text-truncate">Já Pagas (Nº)</label>
+                  <input type="number" min="0" value={vendorPaidInstallments} onChange={e => setVendorPaidInstallments(e.target.value === '' ? '' : parseInt(e.target.value))} placeholder="Ex: 0" className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-800" />
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Anotações adicionais</label>
                 <textarea rows={2} value={vendorNotes} onChange={e => setVendorNotes(e.target.value)} placeholder="Detalhes do contrato, pendências..." className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-800" />
               </div>
 
-              <div className="pt-2 space-y-3">
-                <div className="flex items-center gap-2">
-                  <input type="checkbox" id="isHired" checked={vendorIsHired} onChange={e => setVendorIsHired(e.target.checked)} className="w-5 h-5 rounded-md border-slate-300 text-slate-800 focus:ring-slate-800" />
-                  <label htmlFor="isHired" className="text-sm font-medium text-slate-700 cursor-pointer">Contrato Fechado (Fornecedor Contratado)</label>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+                  <select value={vendorStatus} onChange={e => setVendorStatus(e.target.value)} className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-800 bg-white">
+                    <option value="A Consultar">A Consultar</option>
+                    <option value="Em Orçamento">Em Orçamento</option>
+                    <option value="Aguardando Contrato">Aguardando Contrato</option>
+                    <option value="Contratado">Contratado</option>
+                    <option value="Quitado">Quitado</option>
+                  </select>
+                </div>
+                <div className="flex flex-col justify-end pb-2">
+                  <div className="flex items-center gap-2">
+                    <input type="checkbox" id="considerCost" checked={vendorConsiderCost} onChange={e => setVendorConsiderCost(e.target.checked)} className="w-5 h-5 rounded-md border-slate-300 text-slate-800 focus:ring-slate-800" />
+                    <label htmlFor="considerCost" className="text-sm font-medium text-slate-700 cursor-pointer leading-tight">Considerar custo nos cálculos do Dashboard?</label>
+                  </div>
                 </div>
               </div>
 
@@ -981,6 +1558,36 @@ export default function Admin() {
                 <button type="button" onClick={() => setIsVendorModalOpen(false)} className="flex-1 px-4 py-3 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-medium transition-colors">Cancelar</button>
                 <button type="submit" disabled={isSubmitting} className="flex-1 px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-medium transition-colors disabled:opacity-50">
                   {isSubmitting ? 'Salvando...' : 'Salvar Fornecedor'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Cadastro de FAQ */}
+      {isFaqModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-3xl shadow-xl w-full max-w-lg p-6 md:p-8 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-2xl font-serif text-slate-800">{editingFaqId ? 'Editar Pergunta' : 'Nova Pergunta'}</h3>
+              <button onClick={() => setIsFaqModalOpen(false)} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+            </div>
+
+            <form onSubmit={handleSaveFaq} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Pergunta</label>
+                <input type="text" required value={faqQuestion} onChange={e => setFaqQuestion(e.target.value)} placeholder="Ex: Qual o traje do casamento?" className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-800" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Resposta</label>
+                <textarea rows={4} required value={faqAnswer} onChange={e => setFaqAnswer(e.target.value)} placeholder="Ex: Esporte Fino..." className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-800" />
+              </div>
+
+              <div className="pt-6 flex gap-3">
+                <button type="button" onClick={() => setIsFaqModalOpen(false)} className="flex-1 px-4 py-3 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-medium transition-colors">Cancelar</button>
+                <button type="submit" disabled={isSubmitting} className="flex-1 px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-medium transition-colors disabled:opacity-50">
+                  {isSubmitting ? 'Salvando...' : 'Salvar Pergunta'}
                 </button>
               </div>
             </form>

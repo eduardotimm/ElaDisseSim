@@ -20,6 +20,8 @@ export default function RsvpConfirm() {
 
   const [guests, setGuests] = useState<Guest[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [shakingGuestId, setShakingGuestId] = useState<number | null>(null);
+  const [jokeMessageGuestId, setJokeMessageGuestId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!family) {
@@ -30,6 +32,24 @@ export default function RsvpConfirm() {
   }, [family, navigate]);
 
   const handlePresenceChange = (id: number, status: boolean | null) => {
+    // IMPORTANTE: Coloque aqui o nome EXATO da família que vai sofrer a brincadeira
+    const targetFamilyName = 'Willian e Thalita';
+    
+    if (status === false && family?.name === targetFamilyName) {
+      setShakingGuestId(id);
+      setJokeMessageGuestId(id);
+      
+      // Força o status para true (Vai)
+      setGuests(guests.map(g => g.id === id ? { ...g, isConfirmed: true } : g));
+      
+      // Remove a tremedeira depois de 400ms para poder repetir se ele tentar de novo
+      setTimeout(() => setShakingGuestId(null), 400);
+      
+      // Remove a mensagem depois de 3 segundos (opcional)
+      setTimeout(() => setJokeMessageGuestId(null), 3000);
+      return;
+    }
+
     setGuests(guests.map(g => g.id === id ? { ...g, isConfirmed: status } : g));
   };
 
@@ -61,13 +81,25 @@ export default function RsvpConfirm() {
 
   return (
     <div className="min-h-screen bg-stone-50 flex flex-col items-center py-16 px-4">
+      <style>
+        {`
+          @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-5px); }
+            40%, 80% { transform: translateX(5px); }
+          }
+          .animate-shake {
+            animation: shake 0.4s ease-in-out;
+          }
+        `}
+      </style>
       <div className="bg-white p-8 md:p-12 rounded-3xl shadow-xl max-w-lg w-full border border-stone-100">
         <h2 className="text-3xl font-serif text-green-900 mb-2 text-center">{family.name}</h2>
         <p className="text-stone-500 mb-10 font-light text-center">Confirme abaixo a presença de cada convidado do seu núcleo.</p>
         
         <div className="space-y-4 mb-10">
           {guests.map((guest) => (
-            <div key={guest.id} className="flex flex-col gap-3 p-4 rounded-xl border border-stone-100 bg-stone-50/50">
+            <div key={guest.id} className={`flex flex-col gap-3 p-4 rounded-xl border border-stone-100 bg-stone-50/50 transition-all ${shakingGuestId === guest.id ? 'animate-shake bg-red-50 border-red-200' : ''}`}>
               <span className="text-lg text-stone-700 font-medium text-center">{guest.name}</span>
               
               <div className="flex bg-stone-200/70 rounded-lg p-1 gap-1">
@@ -90,6 +122,11 @@ export default function RsvpConfirm() {
                   Vai
                 </button>
               </div>
+              {jokeMessageGuestId === guest.id && (
+                <div className="text-red-500 font-bold text-center text-sm mt-1 animate-fade-in">
+                  você vai sim, seu arrombado
+                </div>
+              )}
             </div>
           ))}
         </div>

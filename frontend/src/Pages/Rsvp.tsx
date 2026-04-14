@@ -7,13 +7,23 @@ export default function Rsvp() {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
+  const formatPhoneNumber = (value: string) => {
+    if (!value) return '';
+    const cleaned = value.replace(/\D/g, '').slice(0, 11);
+    if (cleaned.length === 0) return '';
+    if (cleaned.length <= 2) return `(${cleaned}`;
+    if (cleaned.length <= 7) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`;
+    return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
     
     try {
-      const response = await fetch(`http://localhost:5062/api/families/by-phone/${encodeURIComponent(phone)}`);
+      const cleanPhone = phone.replace(/\D/g, '');
+      const response = await fetch(`http://localhost:5062/api/families/by-phone/${encodeURIComponent(cleanPhone)}`);
       
       if (response.ok) {
         const family = await response.json();
@@ -39,7 +49,8 @@ export default function Rsvp() {
             type="tel" 
             placeholder="(11) 99999-9999" 
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            onChange={(e) => setPhone(formatPhoneNumber(e.target.value))}
+            maxLength={15}
             className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:outline-none focus:border-green-800 focus:ring-1 focus:ring-green-800 transition-all text-center text-lg text-gray-700 tracking-wider"
             required
           />

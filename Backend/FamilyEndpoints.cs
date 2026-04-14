@@ -21,7 +21,7 @@ public static class FamilyEndpoints
                 })
                 .ToListAsync();
             return Results.Ok(families);
-        });
+        }).RequireAuthorization();
 
         app.MapPost("/api/families", async (CreateFamilyRequest request, AppDbContext db) =>
         {
@@ -46,7 +46,7 @@ public static class FamilyEndpoints
             await db.SaveChangesAsync();
 
             return Results.Ok(new { Message = "Família cadastrada com sucesso!", FamilyId = family.Id });
-        });
+        }).RequireAuthorization();
 
         app.MapDelete("/api/families/{id:int}", async (int id, AppDbContext db) =>
         {
@@ -60,7 +60,7 @@ public static class FamilyEndpoints
             await db.SaveChangesAsync();
 
             return Results.Ok(new { Message = "Família excluída com sucesso!" });
-        });
+        }).RequireAuthorization();
 
         app.MapPut("/api/families/{id:int}", async (int id, UpdateFamilyRequest request, AppDbContext db) =>
         {
@@ -76,7 +76,7 @@ public static class FamilyEndpoints
             family.PhoneNumber = request.PhoneNumber;
 
             // Identifica os IDs dos convidados que vieram na requisição
-            var requestGuestIds = request.Guests.Where(g => g.Id.HasValue).Select(g => g.Id.Value).ToList();
+            var requestGuestIds = request.Guests.Where(g => g.Id.HasValue).Select(g => g.Id.GetValueOrDefault()).ToList();
             
             // Remove os convidados que estavam no banco, mas foram apagados no frontend
             var guestsToRemove = family.Guests.Where(g => !requestGuestIds.Contains(g.Id)).ToList();
@@ -99,7 +99,7 @@ public static class FamilyEndpoints
 
             await db.SaveChangesAsync();
             return Results.Ok(new { Message = "Família atualizada com sucesso!" });
-        });
+        }).RequireAuthorization();
 
         app.MapGet("/api/families/by-phone/{phoneNumber}", async (string phoneNumber, AppDbContext db) =>
         {
@@ -142,7 +142,7 @@ public static class FamilyEndpoints
             }
             await db.SaveChangesAsync();
             return Results.Ok(new { Message = "Todos os convidados foram confirmados com sucesso!" });
-        });
+        }).RequireAuthorization();
     }
 }
 
