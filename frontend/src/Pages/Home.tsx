@@ -11,7 +11,7 @@ export default function Home() {
   useEffect(() => {
     const fetchFaqs = async () => {
       try {
-        const response = await fetch('http://localhost:5062/api/faqs');
+        const response = await fetch('/api/faqs');
         if (response.ok) {
           const data = await response.json();
           setFaqs(data);

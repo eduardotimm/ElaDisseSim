@@ -23,7 +23,7 @@ export default function Rsvp() {
     
     try {
       const cleanPhone = phone.replace(/\D/g, '');
-      const response = await fetch(`http://localhost:5062/api/families/by-phone/${encodeURIComponent(cleanPhone)}`);
+      const response = await fetch(`/api/families/by-phone/${encodeURIComponent(cleanPhone)}`);
       
       if (response.ok) {
         const family = await response.json();

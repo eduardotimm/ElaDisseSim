@@ -74,7 +74,7 @@ export default function Presentes() {
 
   const fetchGifts = async () => {
     try {
-      const response = await fetch('http://localhost:5062/api/gifts');
+      const response = await fetch('/api/gifts');
       if (response.ok) {
         const data = await response.json();
         setGifts(data);
@@ -135,7 +135,7 @@ export default function Presentes() {
     setIsProcessing(true);
 
     try {
-      const response = await fetch(`http://localhost:5062/api/gifts/${selectedGift.id}/purchase`, {
+      const response = await fetch(`/api/gifts/${selectedGift.id}/purchase`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phoneNumber: cleanPhone })

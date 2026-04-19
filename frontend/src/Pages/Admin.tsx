@@ -118,7 +118,7 @@ export default function Admin() {
 
   const fetchFamilies = async () => {
     try {
-      const response = await fetch('http://localhost:5062/api/families', {
+      const response = await fetch('/api/families', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.status === 401) {
@@ -141,7 +141,7 @@ export default function Admin() {
 
   const fetchGifts = async () => {
     try {
-      const response = await fetch('http://localhost:5062/api/gifts');
+      const response = await fetch('/api/gifts');
       if (response.ok) {
         const data = await response.json();
         setGifts(data);
@@ -153,7 +153,7 @@ export default function Admin() {
 
   const fetchVendors = async () => {
     try {
-      const response = await fetch('http://localhost:5062/api/vendors', {
+      const response = await fetch('/api/vendors', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
@@ -167,7 +167,7 @@ export default function Admin() {
 
   const fetchFaqs = async () => {
     try {
-      const response = await fetch('http://localhost:5062/api/faqs');
+      const response = await fetch('/api/faqs');
       if (response.ok) {
         const data = await response.json();
         setFaqs(data);
@@ -308,8 +308,8 @@ export default function Admin() {
     setIsSubmitting(true);
     try {
       const url = editingFamilyId 
-        ? `http://localhost:5062/api/families/${editingFamilyId}`
-        : 'http://localhost:5062/api/families';
+        ? `/api/families/${editingFamilyId}`
+        : '/api/families';
       const method = editingFamilyId ? 'PUT' : 'POST';
       const cleanPhone = phoneNumber.replace(/\D/g, ''); // Remove máscara para salvar no banco
       const bodyData = { familyName, phoneNumber: cleanPhone, guests: guests.filter(g => g.name.trim() !== '') };
@@ -344,7 +344,7 @@ export default function Admin() {
     }
 
     try {
-      const response = await fetch(`http://localhost:5062/api/families/${id}`, {
+      const response = await fetch(`/api/families/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -396,7 +396,7 @@ export default function Admin() {
     }
     setIsSubmitting(true);
     try {
-      const response = await fetch('http://localhost:5062/api/families/confirm-all', { 
+      const response = await fetch('/api/families/confirm-all', { 
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -420,8 +420,8 @@ export default function Admin() {
     setIsSubmitting(true);
     try {
       const url = editingGiftId 
-        ? `http://localhost:5062/api/gifts/${editingGiftId}`
-        : 'http://localhost:5062/api/gifts';
+        ? `/api/gifts/${editingGiftId}`
+        : '/api/gifts';
       const method = editingGiftId ? 'PUT' : 'POST';
       const bodyData = {
         title: giftTitle,
@@ -461,7 +461,7 @@ export default function Admin() {
       return;
     }
     try {
-      const response = await fetch(`http://localhost:5062/api/gifts/${id}`, { 
+      const response = await fetch(`/api/gifts/${id}`, { 
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -477,7 +477,7 @@ export default function Admin() {
     if (!window.confirm('Confirmar o recebimento do PIX e marcar este presente como Comprado?')) return;
     setIsSubmitting(true);
     try {
-      const response = await fetch(`http://localhost:5062/api/gifts/${id}/confirm-reservation`, { 
+      const response = await fetch(`/api/gifts/${id}/confirm-reservation`, { 
         method: 'POST', headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) fetchGifts();
@@ -493,7 +493,7 @@ export default function Admin() {
     if (!window.confirm('Cancelar a reserva e disponibilizar o presente novamente?')) return;
     setIsSubmitting(true);
     try {
-      const response = await fetch(`http://localhost:5062/api/gifts/${id}/cancel-reservation`, { 
+      const response = await fetch(`/api/gifts/${id}/cancel-reservation`, { 
         method: 'POST', headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) fetchGifts();
@@ -510,8 +510,8 @@ export default function Admin() {
     setIsSubmitting(true);
     try {
       const url = editingVendorId 
-        ? `http://localhost:5062/api/vendors/${editingVendorId}`
-        : 'http://localhost:5062/api/vendors';
+        ? `/api/vendors/${editingVendorId}`
+        : '/api/vendors';
       const method = editingVendorId ? 'PUT' : 'POST';
 
       let finalStatus = vendorStatus;
@@ -567,7 +567,7 @@ export default function Admin() {
       return;
     }
     try {
-      const response = await fetch(`http://localhost:5062/api/vendors/${id}`, { 
+      const response = await fetch(`/api/vendors/${id}`, { 
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -612,7 +612,7 @@ export default function Admin() {
         notes: vendor.notes || null
       };
 
-      const response = await fetch(`http://localhost:5062/api/vendors/${vendorId}`, {
+      const response = await fetch(`/api/vendors/${vendorId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(bodyData)
@@ -635,8 +635,8 @@ export default function Admin() {
     setIsSubmitting(true);
     try {
       const url = editingFaqId 
-        ? `http://localhost:5062/api/faqs/${editingFaqId}`
-        : 'http://localhost:5062/api/faqs';
+        ? `/api/faqs/${editingFaqId}`
+        : '/api/faqs';
       const method = editingFaqId ? 'PUT' : 'POST';
       const bodyData = { question: faqQuestion, answer: faqAnswer };
 
@@ -674,7 +674,7 @@ export default function Admin() {
     setFaqs(newFaqs); // Atualiza UI instantaneamente
 
     try {
-      await fetch('http://localhost:5062/api/faqs/reorder', {
+      await fetch('/api/faqs/reorder', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(newFaqs.map(f => f.id))
@@ -687,7 +687,7 @@ export default function Admin() {
   const handleDeleteFaq = async (id: number) => {
     if (!window.confirm('Tem certeza que deseja excluir esta pergunta?')) return;
     try {
-      const response = await fetch(`http://localhost:5062/api/faqs/${id}`, { 
+      const response = await fetch(`/api/faqs/${id}`, { 
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -704,7 +704,7 @@ export default function Admin() {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:5062/api/auth/login', {
+      const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })

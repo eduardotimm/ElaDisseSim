@@ -58,7 +58,7 @@ export default function RsvpConfirm() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(`http://localhost:5062/api/families/${family.id}/rsvp`, {
+      const response = await fetch(`/api/families/${family.id}/rsvp`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ guests: guests.map(g => ({ id: g.id, isConfirmed: g.isConfirmed })) })
