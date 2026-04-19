@@ -5,6 +5,7 @@ export default function Home() {
   const navigate = useNavigate();
 
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+
   const [faqs, setFaqs] = useState<{ id: number; question: string; answer: string }[]>([]);
 
   useEffect(() => {
@@ -136,10 +137,15 @@ export default function Home() {
             ></iframe>
           </div>
 
-          {/* Botão Sou Convidado */}
-          <button onClick={() => navigate('/rsvp')} className="bg-green-800 hover:bg-green-900 text-white font-serif tracking-widest text-lg md:text-xl py-4 px-12 rounded-full shadow-xl hover:shadow-green-900/30 transition-all transform hover:-translate-y-1 mb-16">
-            Sou Convidado
-          </button>
+          {/* Botões de Ação */}
+          <div className="flex flex-col gap-4 mb-16 w-full sm:w-auto">
+            <button onClick={() => navigate('/rsvp')} className="w-full bg-green-800 hover:bg-green-900 text-white font-serif tracking-widest text-lg md:text-xl py-4 px-12 rounded-full shadow-xl hover:shadow-green-900/30 transition-all transform hover:-translate-y-1">
+              Sou Convidado
+            </button>
+            <button onClick={() => navigate('/presentes')} className="w-full bg-stone-200 hover:bg-stone-300 text-stone-700 font-serif tracking-widest text-lg md:text-xl py-4 px-12 rounded-full shadow-md transition-all transform hover:-translate-y-1">
+              Lista de Presentes
+            </button>
+          </div>
 
           {/* Dúvidas Frequentes (FAQ) */}
           <div className="w-full max-w-3xl text-left mb-12">
