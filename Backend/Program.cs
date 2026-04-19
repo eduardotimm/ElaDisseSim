@@ -23,8 +23,9 @@ builder.Services.AddCors(options =>
 });
 
 // Configura o Entity Framework Core usando SQLite
+var dbPath = Environment.GetEnvironmentVariable("DB_PATH") ?? "eladissesim.db";
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite("Data Source=eladissesim.db"));
+    options.UseSqlite($"Data Source={dbPath}"));
 
 // Adiciona serviços de Autenticação e Autorização via JWT
 builder.Services.AddAuthorization();
@@ -57,14 +58,16 @@ builder.Services.AddRateLimiter(options =>
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 });
 
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+
 var app = builder.Build();
 
 app.UseCors("AllowFrontend");
-app.UseRateLimiter(); // Ativa o limitador
+app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();
-
 // Garante que o banco de dados (e as tabelas) seja criado na inicialização
 using (var scope = app.Services.CreateScope())
 {
