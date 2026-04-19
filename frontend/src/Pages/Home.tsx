@@ -48,6 +48,30 @@ export default function Home() {
     return () => clearInterval(timer);
   }, []);
 
+  // Substitua os links abaixo pelos links das suas fotos reais
+  // E altere as legendas como preferir! Você pode adicionar ou remover linhas.
+  const ourPhotos = [
+    { url: 'https://res.cloudinary.com/drelp7j18/image/upload/v1776628890/WhatsApp_Image_2026-04-19_at_17.01.00_sspqyj.jpg', caption: 'Nossa primeira foto juntos, na primeira semana de aula' },
+    { url: 'https://res.cloudinary.com/drelp7j18/image/upload/v1776628581/WhatsApp_Image_2026-04-19_at_16.39.24_e4fnn8.jpg', caption: 'Por um tempo, fomos lado a lado de VLT à faculdade.' },
+    { url: 'https://res.cloudinary.com/drelp7j18/image/upload/v1776628580/WhatsApp_Image_2026-04-19_at_16.42.56_y9glya.jpg', caption: 'Passeamos muito,' },
+    { url: 'https://res.cloudinary.com/drelp7j18/image/upload/v1776628579/WhatsApp_Image_2026-04-19_at_16.40.35_ymtb5s.jpg', caption: 'Muito mesmo,' },
+    { url: 'https://res.cloudinary.com/drelp7j18/image/upload/v1776628580/WhatsApp_Image_2026-04-19_at_16.44.46_u6gt93.jpg', caption: 'E no sexto mês, oficializamos!' },
+    { url: 'https://res.cloudinary.com/drelp7j18/image/upload/v1776628579/WhatsApp_Image_2026-04-19_at_16.42.24_nd0qye.jpg', caption: 'Passamos nosso primeiro dia dos namorados juntos' },
+    { url: 'https://res.cloudinary.com/drelp7j18/image/upload/v1776628580/WhatsApp_Image_2026-04-19_at_16.43.42_esnefy.jpg', caption: 'Conhecemos nossos melhores amigos' },
+    { url: 'https://res.cloudinary.com/drelp7j18/image/upload/v1776628580/WhatsApp_Image_2026-04-19_at_16.46.52_gjabbz.jpg', caption: 'Até que, no final do segundo ano, decidimos nos mudar!' },
+    { url: 'https://res.cloudinary.com/drelp7j18/image/upload/v1776628581/WhatsApp_Image_2026-04-19_at_16.47.05_czsvow.jpg', caption: 'Não foi fácil, demoramos para conquistar nossas coisas....' },
+    { url: 'https://res.cloudinary.com/drelp7j18/image/upload/v1776628579/WhatsApp_Image_2026-04-19_at_16.48.48_vpc1sd.jpg', caption: 'Mas em pouco tempo, demos nossa primeira festa!' },
+    { url: 'https://res.cloudinary.com/drelp7j18/image/upload/v1776628579/WhatsApp_Image_2026-04-19_at_16.53.22_ojfvmw.jpg', caption: 'Adotamos um casal de gatinhos, nossos primeiros filhos' },
+    { url: 'https://res.cloudinary.com/drelp7j18/image/upload/v1776629502/WhatsApp_Image_2026-04-19_at_17.11.17_iiiyj9.jpg', caption: 'Mas infelizmente, perdemos o Poleta para a PIF.' },
+    { url: 'https://res.cloudinary.com/drelp7j18/image/upload/v1776629627/WhatsApp_Image_2026-04-19_at_17.13.24_vzaidq.jpg', caption: 'Não queríamos que nossa filha crescesse sozinha,' },
+    { url: 'https://res.cloudinary.com/drelp7j18/image/upload/v1776628579/WhatsApp_Image_2026-04-19_at_16.54.13_ymylkx.jpg', caption: 'Então adotamos uma irmãzinha...' },
+    { url: 'https://res.cloudinary.com/drelp7j18/image/upload/v1776628580/WhatsApp_Image_2026-04-19_at_16.54.43_siknox.jpg', caption: 'E mais uma....' },
+    { url: 'https://res.cloudinary.com/drelp7j18/image/upload/v1776628580/WhatsApp_Image_2026-04-19_at_16.55.21_mtxqzr.jpg', caption: 'E mais um.....' },
+    { url: 'https://res.cloudinary.com/drelp7j18/image/upload/v1776629741/WhatsApp_Image_2026-04-19_at_17.15.25_zycryf.jpg', caption: 'E assim "tivemos" com nossos 4 filhos!' },
+    { url: 'https://res.cloudinary.com/drelp7j18/image/upload/v1776629925/WhatsApp_Image_2026-04-19_at_17.18.26_k6mwl4.jpg', caption: 'Então, em Março de 2026,' },
+    { url: 'https://res.cloudinary.com/drelp7j18/image/upload/v1776629923/WhatsApp_Image_2026-04-19_at_17.18.26_1_wk2t7k.jpg', caption: 'Noivamos!' },
+  ];
+
   return (
     <div className="h-screen w-full overflow-y-auto snap-y snap-mandatory bg-gradient-to-br from-stone-50 via-white to-stone-200 font-sans text-gray-800 relative scroll-smooth">
       {/* Contêiner Principal de Scroll Snap */}
@@ -63,8 +87,8 @@ export default function Home() {
       </header>
 
       {/* SEÇÃO 1: Hero (Save the Date) */}
-      <section id="inicio" className="min-h-screen w-full snap-start flex flex-col md:flex-row items-center justify-between p-8 md:p-24 pt-24">
-        <div className="w-full md:w-1/2 text-center md:text-left mb-16 md:mb-0">
+      <section id="inicio" className="min-h-screen w-full snap-start flex flex-col md:flex-row items-center justify-center md:justify-between p-8 md:p-24 pt-24">
+        <div className="w-full md:w-1/2 text-center md:text-left mb-8 md:mb-0">
           <h2 className="text-xs md:text-sm tracking-[0.4em] text-gray-400 uppercase mb-4">Save the Date</h2>
           <h1 className="text-6xl md:text-8xl font-serif text-green-900 mb-6 pb-2 leading-tight">
             Anna &<br />Eduardo
@@ -93,15 +117,15 @@ export default function Home() {
           
           {/* Carrossel de Fotos */}
           <div className="flex gap-6 md:gap-8 overflow-x-auto pb-8 snap-x snap-mandatory px-4 md:px-0 mb-10" style={{ scrollbarWidth: 'thin', scrollbarColor: '#14532d transparent' }}>
-            {[1, 2, 3, 4, 5, 6].map((item) => (
-              <div key={item} className="flex flex-col items-center snap-center shrink-0">
+            {ourPhotos.map((photo, index) => (
+              <div key={index} className="flex flex-col items-center snap-center shrink-0">
                 <img 
-                  src={`https://picsum.photos/seed/${item * 15}/300/400`}
-                  alt={`Nossa foto ${item}`}
+                  src={photo.url}
+                  alt={`Nossa foto ${index + 1}`}
                   className="w-56 md:w-72 h-80 md:h-[26rem] object-cover rounded-2xl shadow-lg hover:opacity-95 transition-opacity mb-4"
                 />
                 <p className="text-sm md:text-base text-stone-500 font-light italic">
-                  Legenda da foto {item}
+                  {photo.caption}
                 </p>
               </div>
             ))}
@@ -109,10 +133,7 @@ export default function Home() {
 
           <div className="bg-white/60 backdrop-blur-sm p-6 md:p-10 rounded-3xl shadow-sm border border-white/50 max-w-4xl mx-auto">
             <p className="text-base md:text-lg text-stone-600 font-light leading-relaxed mb-4">
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse varius enim in eros elementum tristique. Duis cursus, mi quis viverra ornare, eros dolor interdum nulla, ut commodo diam libero vitae erat.
-            </p>
-            <p className="text-base md:text-lg text-stone-600 font-light leading-relaxed">
-              Nunc ut sem vitae risus tristique posuere. Praesent et nisl in neque condimentum scelerisque.
+              Nos conhecemos na primeira semana da faculdade, na estação do VLT. Saímos juntos, nos conhecemos melhor, e começamos a ir juntos para as aulas. No final do segundo ano da faculdade, decidimos que gostaríamos de morar juntos, e alugamos um apartamento próximo à universidade. Agora formados, vamos para nosso próximo sonho: O de oficializar nossa união.
             </p>
           </div>
         </div>
