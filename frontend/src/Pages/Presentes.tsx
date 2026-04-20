@@ -389,10 +389,12 @@ export default function Presentes() {
               </div>
             ) : (
               <div className="bg-stone-50 p-4 rounded-2xl mb-6 border border-stone-100 flex flex-col items-center text-center animate-fade-in">
-                <p className="text-sm text-stone-600 mb-4">Clique no botão abaixo para gerar seu link de pagamento seguro do Mercado Pago.</p>
+                <p className="text-sm text-stone-600 mb-4">
+                  {paymentLink ? 'Link gerado com sucesso!' : 'Clique no botão abaixo para gerar seu link de pagamento seguro do Mercado Pago.'}
+                </p>
                 {paymentLink ? (
                   <a href={paymentLink} target="_blank" rel="noreferrer" className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-4 rounded-xl text-sm font-bold tracking-wide transition-colors mb-3 w-full shadow-md flex items-center justify-center">
-                    Pagar com Mercado Pago 🔗
+                    Pronto! Clique para pagar 🔗
                   </a>
                 ) : (
                   <button onClick={generatePaymentLink} disabled={isGeneratingLink || currentPrice <= 0} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-4 rounded-xl text-sm font-bold tracking-wide transition-colors mb-3 w-full shadow-md flex items-center justify-center disabled:opacity-50">
@@ -404,8 +406,8 @@ export default function Presentes() {
             )}
 
             <div className="space-y-3">
-              <div className="text-center bg-amber-50 text-amber-800 p-3 rounded-xl border border-amber-200 shadow-sm animate-fade-in">
-                <p className="text-sm font-semibold">⚠️ Não esqueça de confirmar o pagamento aqui no site depois de realizar!</p>
+              <div className="text-center bg-rose-50 text-rose-700 p-3 rounded-xl border border-rose-200 shadow-sm animate-fade-in">
+                <p className="text-sm font-semibold">⚠️ Importante: Não esqueça de confirmar o pagamento aqui no site depois de realizar!</p>
               </div>
               <button 
                 onClick={handlePaymentConfirm} 
