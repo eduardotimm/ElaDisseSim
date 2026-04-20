@@ -124,15 +124,14 @@ public static class GiftEndpoints
                 {
                     installments = request.Installments,
                     default_installments = request.Installments
-                },
-                auto_return = "approved"
+                }
             };
 
             var response = await httpClient.PostAsJsonAsync("https://api.mercadopago.com/checkout/preferences", payload);
             if (!response.IsSuccessStatusCode)
             {
                 var error = await response.Content.ReadAsStringAsync();
-                return Results.BadRequest($"Erro ao gerar link de pagamento.");
+                return Results.BadRequest($"Erro detalhado do Mercado Pago: {error}");
             }
 
             var result = await response.Content.ReadFromJsonAsync<JsonElement>();

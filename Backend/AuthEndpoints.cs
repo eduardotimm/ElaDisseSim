@@ -14,8 +14,9 @@ public static class AuthEndpoints
     {
         app.MapPost("/api/auth/login", (LoginRequest request, IConfiguration config) =>
         {
-            // A senha agora fica protegida no servidor
-            if (request.Username == "Tovom" && request.Password == "XingLing12#")
+            var adminUser = config["Auth:Username"];
+            var adminPassword = config["Auth:Password"];
+            if (request.Username == adminUser && request.Password == adminPassword)
             {
                 var issuer = config["Jwt:Issuer"] ?? "ElaDisseSim";
                 var audience = config["Jwt:Audience"] ?? "ElaDisseSimUI";
