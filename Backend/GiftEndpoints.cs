@@ -1,3 +1,7 @@
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text.Json;
+using Microsoft.Extensions.Configuration;
 using ElaDisseSim.Api.Database;
 using Microsoft.EntityFrameworkCore;
 
@@ -94,9 +98,50 @@ public static class GiftEndpoints
 
             return Results.Ok(new { Message = "Presente excluído com sucesso!" });
         }).RequireAuthorization();
+
+        app.MapPost("/api/gifts/create-preference", async (CreatePreferenceRequest request, IConfiguration config) =>
+        {
+            var token = config["MercadoPago:AccessToken"];
+            if (string.IsNullOrEmpty(token)) return Results.BadRequest("Token do Mercado Pago não configurado.");
+
+            using var httpClient = new HttpClient();
+            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            var payload = new
+            {
+                items = new[]
+                {
+                    new
+                    {
+                        title = request.Title,
+                        description = request.Description ?? "Presente de Casamento",
+                        quantity = 1,
+                        currency_id = "BRL",
+                        unit_price = request.Price
+                    }
+                },
+                payment_methods = new
+                {
+                    installments = request.Installments,
+                    default_installments = request.Installments
+                },
+                auto_return = "approved"
+            };
+
+            var response = await httpClient.PostAsJsonAsync("https://api.mercadopago.com/checkout/preferences", payload);
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                return Results.BadRequest($"Erro ao gerar link de pagamento.");
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<JsonElement>();
+            return Results.Ok(new { init_point = result.GetProperty("init_point").GetString() });
+        });
     }
 }
 
 public record CreateGiftRequest(string Title, string Description, decimal Price, string? ImageUrl);
 public record UpdateGiftRequest(string Title, string Description, decimal Price, string? ImageUrl, bool IsPurchased, string? PurchasedBy);
 public record PurchaseGiftRequest(string PhoneNumber);
+public record CreatePreferenceRequest(string Title, string? Description, decimal Price, int Installments);

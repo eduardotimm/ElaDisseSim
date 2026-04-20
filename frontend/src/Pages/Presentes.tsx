@@ -62,6 +62,8 @@ export default function Presentes() {
   const [installments, setInstallments] = useState<number>(2);
   const [isCustomGift, setIsCustomGift] = useState(false);
   const [customGiftValue, setCustomGiftValue] = useState<number | ''>('');
+  const [paymentLink, setPaymentLink] = useState<string | null>(null);
+  const [isGeneratingLink, setIsGeneratingLink] = useState(false);
 
   const formatPhoneNumber = (value: string) => {
     if (!value) return '';
@@ -89,6 +91,10 @@ export default function Presentes() {
   useEffect(() => {
     fetchGifts();
   }, []);
+
+  useEffect(() => {
+    setPaymentLink(null);
+  }, [paymentType, installments, customGiftValue, selectedGift]);
 
   const handleSelectGift = (gift: Gift) => {
     setSelectedGift(gift);
@@ -175,6 +181,34 @@ export default function Presentes() {
     return 0;
   };
   const netAmount = currentPrice * (1 - getCreditRate() / 100);
+
+  const generatePaymentLink = async () => {
+    if (currentPrice <= 0) return;
+    setIsGeneratingLink(true);
+    try {
+      const response = await fetch('/api/gifts/create-preference', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: selectedGift?.title || 'Presente',
+          description: selectedGift?.description || 'Presente de casamento',
+          price: currentPrice,
+          installments: paymentType === 'credit_installments' ? installments : 1
+        })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setPaymentLink(data.init_point);
+      } else {
+        const err = await response.text();
+        alert('Erro ao gerar link de pagamento: ' + err);
+      }
+    } catch (error) {
+      alert('Erro de conexão com o servidor.');
+    } finally {
+      setIsGeneratingLink(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-stone-50 py-16 px-4 font-sans">
@@ -352,19 +386,18 @@ export default function Presentes() {
                   <button onClick={copyToClipboard} disabled={!pixCode} className="bg-stone-200 hover:bg-stone-300 text-stone-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50">Copiar</button>
                 </div>
               </div>
-            ) : isCustomGift ? (
-              <div className="bg-stone-50 p-4 rounded-2xl mb-6 border border-stone-100 flex flex-col items-center text-center animate-fade-in">
-                <p className="text-sm text-stone-600 mb-4">Para presentes de valor livre no cartão de crédito, por favor, nos chame no WhatsApp para gerar um link de pagamento seguro e na hora para você.</p>
-                <a href={`https://wa.me/5511947462080?text=${encodeURIComponent(`Olá, gostaria de presentear os noivos com um valor de ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(currentPrice)} ${paymentType === 'credit_installments' ? `em ${installments}x` : 'à vista'} no cartão.`)}`} target="_blank" rel="noreferrer" className="bg-green-600 hover:bg-green-700 text-white px-6 py-4 rounded-xl text-sm font-bold tracking-wide transition-colors mb-3 w-full shadow-md flex items-center justify-center gap-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256"><path d="M187.58,144.84l-32-16a8,8,0,0,0-8,.5l-14.69,9.8a40.55,40.55,0,0,1-16-16l9.8-14.69a8,8,0,0,0,.5-8l-16-32A8,8,0,0,0,104,64a40,40,0,0,0-40,40,88.1,88.1,0,0,0,88,88,40,40,0,0,0,40-40A8,8,0,0,0,187.58,144.84ZM152,176a72.08,72.08,0,0,1-72-72A24,24,0,0,1,99.29,80.46l11.48,23-10.11,15.16a8,8,0,0,0-.4,8.19,56.63,56.63,0,0,0,22.41,22.41,8,8,0,0,0,8.19-.4l15.16-10.11,23,11.48A24,24,0,0,1,152,176ZM128,24A104,104,0,0,0,36.18,176.88L24.83,210.93a16,16,0,0,0,20.24,20.24l34.05-11.35A104,104,0,1,0,128,24Zm0,192a87.87,87.87,0,0,1-44.06-11.81,8,8,0,0,0-6.54-1.08L44,214l10.89-33.35a8,8,0,0,0-1.08-6.54A88,88,0,1,1,128,216Z"></path></svg> Falar no WhatsApp
-                </a>
-              </div>
             ) : (
               <div className="bg-stone-50 p-4 rounded-2xl mb-6 border border-stone-100 flex flex-col items-center text-center animate-fade-in">
-                <p className="text-sm text-stone-600 mb-4">Clique no botão abaixo para abrir a página de pagamento segura do Mercado Pago.</p>
-                <a href="#" target="_blank" className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-4 rounded-xl text-sm font-bold tracking-wide transition-colors mb-3 w-full shadow-md">
-                  Pagar com Mercado Pago 🔗
-                </a>
+                <p className="text-sm text-stone-600 mb-4">Clique no botão abaixo para gerar seu link de pagamento seguro do Mercado Pago.</p>
+                {paymentLink ? (
+                  <a href={paymentLink} target="_blank" rel="noreferrer" className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-4 rounded-xl text-sm font-bold tracking-wide transition-colors mb-3 w-full shadow-md flex items-center justify-center">
+                    Pagar com Mercado Pago 🔗
+                  </a>
+                ) : (
+                  <button onClick={generatePaymentLink} disabled={isGeneratingLink || currentPrice <= 0} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-4 rounded-xl text-sm font-bold tracking-wide transition-colors mb-3 w-full shadow-md flex items-center justify-center disabled:opacity-50">
+                    {isGeneratingLink ? 'Gerando Link...' : 'Gerar Link de Pagamento'}
+                  </button>
+                )}
                 <p className="text-xs text-stone-500">Após realizar o pagamento na nova aba, volte aqui e clique no botão verde abaixo para confirmar seu presente!</p>
               </div>
             )}
