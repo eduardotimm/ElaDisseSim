@@ -131,7 +131,14 @@ public static class GiftEndpoints
                     },
                     installments = 6, // Força a permitir até 6x no máximo
                     default_installments = request.Installments
-                }
+                },
+                back_urls = new
+                {
+                    success = request.ReturnUrl,
+                    failure = request.ReturnUrl,
+                    pending = request.ReturnUrl
+                },
+                auto_return = "approved"
             };
 
             var response = await httpClient.PostAsJsonAsync("https://api.mercadopago.com/checkout/preferences", payload);
@@ -150,4 +157,4 @@ public static class GiftEndpoints
 public record CreateGiftRequest(string Title, string Description, decimal Price, string? ImageUrl);
 public record UpdateGiftRequest(string Title, string Description, decimal Price, string? ImageUrl, bool IsPurchased, string? PurchasedBy);
 public record PurchaseGiftRequest(string PhoneNumber);
-public record CreatePreferenceRequest(string Title, string? Description, decimal Price, int Installments);
+public record CreatePreferenceRequest(string Title, string? Description, decimal Price, int Installments, string ReturnUrl);

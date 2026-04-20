@@ -193,7 +193,8 @@ export default function Presentes() {
           title: selectedGift?.title || 'Presente',
           description: selectedGift?.description || 'Presente de casamento',
           price: currentPrice,
-          installments: paymentType === 'credit_installments' ? installments : 1
+          installments: paymentType === 'credit_installments' ? installments : 1,
+          returnUrl: window.location.href
         })
       });
       if (response.ok) {
@@ -403,6 +404,9 @@ export default function Presentes() {
             )}
 
             <div className="space-y-3">
+              <div className="text-center bg-amber-50 text-amber-800 p-3 rounded-xl border border-amber-200 shadow-sm animate-fade-in">
+                <p className="text-sm font-semibold">⚠️ Não esqueça de confirmar o pagamento aqui no site depois de realizar!</p>
+              </div>
               <button 
                 onClick={handlePaymentConfirm} 
                 disabled={isProcessing || (isCustomGift && currentPrice <= 0)}
