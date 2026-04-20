@@ -10,7 +10,7 @@ interface Gift {
   isPurchased: boolean;
   reservedUntil?: string | null;
 }
-
+//editando para testar autodeploy.
 // Função utilitária para gerar o código PIX Copia e Cola válido (Padrão EMV / BR Code)
 const generatePix = (amount: number, description: string) => {
   const pixKey = "+5511947462080"; // A chave telefone exige o +55 no padrão BR Code
