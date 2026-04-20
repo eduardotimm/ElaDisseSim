@@ -122,7 +122,14 @@ public static class GiftEndpoints
                 },
                 payment_methods = new
                 {
-                    installments = request.Installments,
+                    excluded_payment_types = new[]
+                    {
+                        new { id = "ticket" }, // Boleto
+                        new { id = "bank_transfer" }, // Pix
+                        new { id = "atm" }, // Pagamento na lotérica
+                        new { id = "debit_card" } // Cartão de débito
+                    },
+                    installments = 6, // Força a permitir até 6x no máximo
                     default_installments = request.Installments
                 }
             };
